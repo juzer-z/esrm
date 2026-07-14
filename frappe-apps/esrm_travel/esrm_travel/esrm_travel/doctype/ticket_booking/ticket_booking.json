@@ -1,0 +1,367 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-04-20 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "overview_section",
+  "naming_series",
+  "customer",
+  "reference",
+  "invoice_number",
+  "booking_owner",
+  "column_break_1",
+  "status",
+  "approval_status",
+  "invoice_status",
+  "issue_date",
+  "traveller_section",
+  "passenger_name",
+  "passport_no",
+  "purpose",
+  "column_break_2",
+  "pnr",
+  "ticket_number",
+  "airline",
+  "booking_section",
+  "flight_date",
+  "route_summary",
+  "flight_number",
+  "column_break_3",
+  "payment_mode",
+  "supplier_reference",
+  "sales_invoice",
+  "sectors_section",
+  "sectors",
+  "amounts_section",
+  "gross_amount",
+  "iata_amount",
+  "supplier_cost",
+  "invoice_amount",
+  "commission",
+  "discount",
+  "profit",
+  "column_break_4",
+  "paid_amount",
+  "outstanding_amount",
+  "remarks_section",
+  "remarks",
+  "uploaded_ticket"
+ ],
+ "fields": [
+  {
+   "fieldname": "overview_section",
+   "fieldtype": "Section Break",
+   "label": "Overview"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "TB-.YYYY.-",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reference"
+  },
+  {
+   "fieldname": "invoice_number",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Invoice Number"
+  },
+  {
+   "fieldname": "booking_owner",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Booking Owner",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nTicketed\nInvoiced\nPartially Paid\nPaid\nTravelled\nRefunded\nCancelled",
+   "read_only": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "approval_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Approval Status",
+   "options": "Draft\nPending Approval\nApproved\nRejected",
+   "read_only": 1
+  },
+  {
+   "default": "Not Invoiced",
+   "fieldname": "invoice_status",
+   "fieldtype": "Select",
+   "label": "Invoice Status",
+   "options": "Not Invoiced\nDraft\nUnpaid\nOverdue\nPartly Paid\nPaid\nCancelled\nCredit Note Issued",
+   "read_only": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "issue_date",
+   "fieldtype": "Date",
+   "label": "Issue Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "traveller_section",
+   "fieldtype": "Section Break",
+   "label": "Traveller"
+  },
+  {
+   "fieldname": "passenger_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Passenger Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "passport_no",
+   "fieldtype": "Data",
+   "label": "Passport Number"
+  },
+  {
+   "default": "Personal",
+   "fieldname": "purpose",
+   "fieldtype": "Select",
+   "label": "Purpose",
+   "options": "Official\nPersonal"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pnr",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "PNR",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ticket_number",
+   "fieldtype": "Data",
+   "label": "Ticket Number"
+  },
+  {
+   "fieldname": "airline",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Airline",
+   "reqd": 1
+  },
+  {
+   "fieldname": "booking_section",
+   "fieldtype": "Section Break",
+   "label": "Booking Details"
+  },
+  {
+   "fieldname": "flight_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Flight Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "route_summary",
+   "fieldtype": "Data",
+   "label": "Route Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "flight_number",
+   "fieldtype": "Data",
+   "label": "Primary Flight Number"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "IATA",
+   "fieldname": "payment_mode",
+   "fieldtype": "Select",
+   "label": "Payment Mode",
+   "options": "IATA\nNon-IATA\nCard\nCash\nBank Transfer"
+  },
+  {
+   "fieldname": "supplier_reference",
+   "fieldtype": "Data",
+   "label": "Supplier Reference"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sectors_section",
+   "fieldtype": "Section Break",
+   "label": "Sectors"
+  },
+  {
+   "fieldname": "sectors",
+   "fieldtype": "Table",
+   "label": "Flight Sectors",
+   "options": "Ticket Sector"
+  },
+  {
+   "fieldname": "amounts_section",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "gross_amount",
+   "fieldtype": "Currency",
+   "label": "Gross Amount"
+  },
+  {
+   "fieldname": "iata_amount",
+   "fieldtype": "Currency",
+   "label": "IATA Amount"
+  },
+  {
+   "fieldname": "supplier_cost",
+   "fieldtype": "Currency",
+   "label": "Supplier Cost"
+  },
+  {
+   "fieldname": "invoice_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Invoice Amount"
+  },
+  {
+   "fieldname": "commission",
+   "fieldtype": "Currency",
+   "label": "Commission",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discount",
+   "fieldtype": "Currency",
+   "label": "Discount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "profit",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Profit",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "label": "Outstanding Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks_section",
+   "fieldtype": "Section Break",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "uploaded_ticket",
+   "fieldtype": "Attach",
+   "label": "Uploaded Ticket"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ESRM Travel",
+ "name": "Ticket Booking",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Ticketing Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Ticketing Agent",
+   "write": 1
+  }
+ ],
+ "search_fields": "customer,passenger_name,pnr,ticket_number,invoice_number,reference,airline,sales_invoice",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "passenger_name",
+ "track_changes": 1
+}

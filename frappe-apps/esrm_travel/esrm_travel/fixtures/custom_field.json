@@ -1,0 +1,51 @@
+[
+  {
+    "doctype": "Custom Field",
+    "dt": "Customer",
+    "fieldname": "esrm_short_name",
+    "fieldtype": "Data",
+    "insert_after": "customer_name",
+    "label": "ESRM Short Name",
+    "name": "Customer-esrm_short_name"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Customer",
+    "fieldname": "esrm_customer_code",
+    "fieldtype": "Data",
+    "insert_after": "esrm_short_name",
+    "label": "ESRM Customer Code",
+    "name": "Customer-esrm_customer_code"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "esrm_invoice_number",
+    "fieldtype": "Data",
+    "in_global_search": 1,
+    "insert_after": "customer",
+    "label": "ESRM Invoice Number",
+    "name": "Sales Invoice-esrm_invoice_number"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "esrm_ticket_booking",
+    "fieldtype": "Link",
+    "insert_after": "esrm_invoice_number",
+    "label": "Ticket Booking",
+    "name": "Sales Invoice-esrm_ticket_booking",
+    "options": "Ticket Booking",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Payment Entry",
+    "fieldname": "esrm_ticket_booking",
+    "fieldtype": "Link",
+    "insert_after": "party",
+    "label": "Ticket Booking",
+    "name": "Payment Entry-esrm_ticket_booking",
+    "options": "Ticket Booking"
+  }
+]
