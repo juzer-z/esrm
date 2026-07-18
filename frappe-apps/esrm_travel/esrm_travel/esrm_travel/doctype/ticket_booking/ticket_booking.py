@@ -32,6 +32,10 @@ class TicketBooking(Document):
         self.sync_invoice_details()
         self.set_status()
 
+    def before_update_after_submit(self):
+        self.validate_amounts()
+        self.calculate_profitability()
+
     def validate_amounts(self):
         amount_fields = [
             "gross_amount",
