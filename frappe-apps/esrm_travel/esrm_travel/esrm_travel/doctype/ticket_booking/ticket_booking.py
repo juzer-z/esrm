@@ -52,11 +52,17 @@ class TicketBooking(Document):
     def calculate_profitability(self):
         gross_amount = flt(self.gross_amount)
         iata_amount = flt(self.iata_amount)
+        supplier_cost = flt(self.supplier_cost)
         invoice_amount = flt(self.invoice_amount)
 
-        self.commission = gross_amount - iata_amount
+        if self.payment_mode == "IATA":
+            self.commission = gross_amount - iata_amount
+            self.profit = invoice_amount - iata_amount
+        else:
+            self.commission = 0
+            self.profit = invoice_amount - supplier_cost
+
         self.discount = gross_amount - invoice_amount
-        self.profit = invoice_amount - iata_amount
 
     def validate_invoice_number(self):
         if not self.invoice_number:

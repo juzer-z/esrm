@@ -5,6 +5,7 @@ import frappe
 
 def setup_workspace():
     ensure_accounting_defaults()
+    recalculate_ticket_profitability()
     setup_number_cards()
     setup_charts()
     setup_esrm_travel_workspace()
@@ -56,6 +57,30 @@ def ensure_accounting_defaults():
             "default_cost_center": default_cost_center,
             "root_cost_center": root_cost_center,
         },
+    )
+
+
+def recalculate_ticket_profitability():
+    if not frappe.db.exists("DocType", "Ticket Booking"):
+        return
+
+    frappe.db.sql(
+        """
+        update `tabTicket Booking`
+        set
+            commission = case
+                when payment_mode = 'IATA'
+                then ifnull(gross_amount, 0) - ifnull(iata_amount, 0)
+                else 0
+            end,
+            discount = ifnull(gross_amount, 0) - ifnull(invoice_amount, 0),
+            profit = case
+                when payment_mode = 'IATA'
+                then ifnull(invoice_amount, 0) - ifnull(iata_amount, 0)
+                else ifnull(invoice_amount, 0) - ifnull(supplier_cost, 0)
+            end
+        where docstatus != 2
+        """
     )
 
 

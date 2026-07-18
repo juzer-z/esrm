@@ -7,7 +7,15 @@ frappe.ui.form.on("Ticket Booking", {
         calculate_profitability(frm);
     },
 
+    supplier_cost(frm) {
+        calculate_profitability(frm);
+    },
+
     invoice_amount(frm) {
+        calculate_profitability(frm);
+    },
+
+    payment_mode(frm) {
         calculate_profitability(frm);
     },
 
@@ -47,9 +55,16 @@ frappe.ui.form.on("Ticket Booking", {
 function calculate_profitability(frm) {
     const gross_amount = flt(frm.doc.gross_amount);
     const iata_amount = flt(frm.doc.iata_amount);
+    const supplier_cost = flt(frm.doc.supplier_cost);
     const invoice_amount = flt(frm.doc.invoice_amount);
 
-    frm.set_value("commission", gross_amount - iata_amount);
+    if (frm.doc.payment_mode === "IATA") {
+        frm.set_value("commission", gross_amount - iata_amount);
+        frm.set_value("profit", invoice_amount - iata_amount);
+    } else {
+        frm.set_value("commission", 0);
+        frm.set_value("profit", invoice_amount - supplier_cost);
+    }
+
     frm.set_value("discount", gross_amount - invoice_amount);
-    frm.set_value("profit", invoice_amount - iata_amount);
 }
