@@ -7,8 +7,8 @@ from esrm_travel.chart_of_accounts import setup_chart_of_accounts
 
 def setup_workspace():
     apply_branding()
-    ensure_accounting_defaults()
     setup_chart_of_accounts()
+    ensure_accounting_defaults()
     recalculate_ticket_profitability()
     setup_number_cards()
     setup_charts()
@@ -20,6 +20,7 @@ def ensure_accounting_defaults():
     company = "Ezzy Services and resources Management"
     root_cost_center = f"{company} - ESRM"
     default_cost_center = "Main - ESRM"
+    default_income_account = "Air Ticket Sales-International - ESRM"
 
     if not frappe.db.exists("Company", company):
         return
@@ -46,6 +47,27 @@ def ensure_accounting_defaults():
 
     if not current or current_is_group:
         settings.default_cost_center = default_cost_center
+
+    income_account_root_type = None
+    income_account_is_group = 0
+    if settings.default_income_account:
+        income_account_root_type, income_account_is_group = frappe.db.get_value(
+            "Account",
+            settings.default_income_account,
+            ["root_type", "is_group"],
+        ) or (None, 0)
+
+    if (
+        frappe.db.exists("Account", default_income_account)
+        and (
+            not settings.default_income_account
+            or income_account_root_type != "Income"
+            or income_account_is_group
+        )
+    ):
+        settings.default_income_account = default_income_account
+
+    if settings.has_value_changed("default_cost_center") or settings.has_value_changed("default_income_account"):
         settings.save(ignore_permissions=True)
 
     frappe.db.sql(

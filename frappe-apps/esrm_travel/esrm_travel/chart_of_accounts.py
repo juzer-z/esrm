@@ -18,7 +18,7 @@ ACCOUNT_GROUPS = [
     ("Intangible Asset", "Fixed Assets - ESRM", "Fixed Asset"),
     ("Share Capital", "Equity - ESRM", "Equity"),
     ("Accounts Payable", "Current Liabilities - ESRM", "Payable"),
-    ("Supplier Control Ledger", "Current Liabilities - ESRM", "Payable"),
+    ("Supplier Control Ledger", "Accounts Payable - ESRM", "Payable"),
     ("Bank Loan", "Loans (Liabilities) - ESRM", ""),
     ("Operating Income", "Direct Income - ESRM", ""),
     ("Non Operating Income", "Indirect Income - ESRM", ""),
@@ -150,6 +150,8 @@ def setup_chart_of_accounts():
         if parent_account:
             ensure_account(account_name, parent_account, account_type, is_group=0)
 
+    ensure_account_parent("Supplier Control Ledger", "Accounts Payable - ESRM")
+
 
 def ensure_account(account_name, parent_account, account_type="", is_group=0):
     if frappe.db.exists("Account", get_account_name(account_name)):
@@ -180,6 +182,19 @@ def ensure_account(account_name, parent_account, account_type="", is_group=0):
     )
     account.insert(ignore_permissions=True)
     return account.name
+
+
+def ensure_account_parent(account_name, parent_account):
+    account_id = get_account_name(account_name)
+    if not frappe.db.exists("Account", account_id) or not frappe.db.exists("Account", parent_account):
+        return
+
+    account = frappe.get_doc("Account", account_id)
+    if account.parent_account == parent_account:
+        return
+
+    account.parent_account = parent_account
+    account.save(ignore_permissions=True)
 
 
 def get_account_name(account_name):
