@@ -13,7 +13,8 @@ source_link = ""
 after_migrate = "esrm_travel.dashboard.setup_workspace"
 
 fixtures = [
-    {"dt": "Role", "filters": [["name", "in", ["Ticketing Agent", "Ticketing Manager"]]]},
+    {"dt": "Role", "filters": [["name", "in", ["Ticketing Agent", "Ticketing Manager", "ESRM Agent"]]]},
+    {"dt": "Custom DocPerm", "filters": [["role", "=", "ESRM Agent"]]},
     {
         "dt": "Custom Field",
         "filters": [

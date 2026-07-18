@@ -10,5 +10,11 @@
     "doctype": "Role",
     "name": "Ticketing Manager",
     "role_name": "Ticketing Manager"
+  },
+  {
+    "desk_access": 1,
+    "doctype": "Role",
+    "name": "ESRM Agent",
+    "role_name": "ESRM Agent"
   }
 ]
