@@ -17,6 +17,7 @@ fixtures = [
     {"dt": "Workflow State", "filters": [["name", "in", ["Draft", "Pending Approval"]]]},
     {"dt": "Workflow Action Master", "filters": [["name", "in", ["Send for Approval"]]]},
     {"dt": "Workflow", "filters": [["name", "in", ["Ticket Booking Approval"]]]},
+    {"dt": "Fiscal Year", "filters": [["name", "in", ["2026-2027"]]]},
     {"dt": "Custom DocPerm", "filters": [["role", "=", "ESRM Agent"]]},
     {
         "dt": "Custom Field",

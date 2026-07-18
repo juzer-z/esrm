@@ -1,0 +1,22 @@
+[
+  {
+    "auto_created": 0,
+    "companies": [
+      {
+        "company": "Ezzy Services and resources Management",
+        "doctype": "Fiscal Year Company",
+        "name": "5jfas1kf7i",
+        "parent": "2026-2027",
+        "parentfield": "companies",
+        "parenttype": "Fiscal Year"
+      }
+    ],
+    "disabled": 0,
+    "doctype": "Fiscal Year",
+    "is_short_year": 0,
+    "name": "2026-2027",
+    "year": "2026-2027",
+    "year_end_date": "2027-06-30",
+    "year_start_date": "2026-07-01"
+  }
+]
