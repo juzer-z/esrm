@@ -2,11 +2,13 @@ import json
 
 import frappe
 from esrm_travel.branding import apply_branding
+from esrm_travel.chart_of_accounts import setup_chart_of_accounts
 
 
 def setup_workspace():
     apply_branding()
     ensure_accounting_defaults()
+    setup_chart_of_accounts()
     recalculate_ticket_profitability()
     setup_number_cards()
     setup_charts()
