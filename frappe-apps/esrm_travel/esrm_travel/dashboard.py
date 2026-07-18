@@ -146,7 +146,7 @@ def upsert_number_card(card):
     doc.update(
         {
             "label": card["label"],
-            "module": "ESRM",
+            "module": "ESRM Travel",
             "type": "Document Type",
             "document_type": card["document_type"],
             "function": card["function"],
@@ -196,7 +196,7 @@ def upsert_chart(chart):
     doc.update(
         {
             "chart_name": chart["chart_name"],
-            "module": "ESRM",
+            "module": "ESRM Travel",
             "chart_type": "Group By",
             "document_type": chart["document_type"],
             "type": chart["type"],
@@ -220,7 +220,7 @@ def setup_esrm_workspace():
         {
             "label": "ESRM",
             "title": "ESRM",
-            "module": "ESRM",
+            "module": "ESRM Travel",
             "icon": "plane",
             "indicator_color": "blue",
             "public": 1,
