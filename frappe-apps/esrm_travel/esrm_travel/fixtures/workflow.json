@@ -1,0 +1,85 @@
+[
+  {
+    "docstatus": 0,
+    "doctype": "Workflow",
+    "document_type": "Ticket Booking",
+    "is_active": 1,
+    "name": "Ticket Booking Approval",
+    "override_status": 0,
+    "send_email_alert": 0,
+    "states": [
+      {
+        "allow_edit": "ESRM Agent",
+        "doc_status": "0",
+        "doctype": "Workflow Document State",
+        "is_optional_state": 0,
+        "state": "Draft",
+        "update_field": "approval_status",
+        "update_value": "Draft"
+      },
+      {
+        "allow_edit": "System Manager",
+        "doc_status": "0",
+        "doctype": "Workflow Document State",
+        "is_optional_state": 0,
+        "state": "Pending Approval",
+        "update_field": "approval_status",
+        "update_value": "Pending Approval"
+      },
+      {
+        "allow_edit": "System Manager",
+        "doc_status": "1",
+        "doctype": "Workflow Document State",
+        "is_optional_state": 0,
+        "state": "Approved",
+        "update_field": "approval_status",
+        "update_value": "Approved"
+      },
+      {
+        "allow_edit": "System Manager",
+        "doc_status": "0",
+        "doctype": "Workflow Document State",
+        "is_optional_state": 1,
+        "state": "Rejected",
+        "update_field": "approval_status",
+        "update_value": "Rejected"
+      }
+    ],
+    "transitions": [
+      {
+        "action": "Send for Approval",
+        "allow_self_approval": 0,
+        "allowed": "ESRM Agent",
+        "doctype": "Workflow Transition",
+        "next_state": "Pending Approval",
+        "state": "Draft"
+      },
+      {
+        "action": "Approve",
+        "allow_self_approval": 0,
+        "allowed": "System Manager",
+        "doctype": "Workflow Transition",
+        "next_state": "Approved",
+        "state": "Pending Approval"
+      },
+      {
+        "action": "Reject",
+        "allow_self_approval": 0,
+        "allowed": "System Manager",
+        "doctype": "Workflow Transition",
+        "next_state": "Rejected",
+        "state": "Pending Approval"
+      },
+      {
+        "action": "Send for Approval",
+        "allow_self_approval": 0,
+        "allowed": "ESRM Agent",
+        "doctype": "Workflow Transition",
+        "next_state": "Pending Approval",
+        "state": "Rejected"
+      }
+    ],
+    "workflow_name": "Ticket Booking Approval",
+    "workflow_state_field": "approval_status"
+  }
+]
