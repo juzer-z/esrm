@@ -211,6 +211,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "default": "IATA",
    "fieldname": "payment_mode",
    "fieldtype": "Select",
@@ -251,11 +252,13 @@
    "label": "Gross Amount"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "iata_amount",
    "fieldtype": "Currency",
    "label": "IATA Amount"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "supplier_cost",
    "fieldtype": "Currency",
    "label": "Supplier Cost"
@@ -267,18 +270,21 @@
    "label": "Invoice Amount"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "commission",
    "fieldtype": "Currency",
    "label": "Commission",
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "discount",
    "fieldtype": "Currency",
    "label": "Discount",
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "profit",
    "fieldtype": "Currency",
    "in_list_view": 1,

@@ -27,7 +27,7 @@
         "update_value": "Pending Approval"
       },
       {
-        "allow_edit": "System Manager",
+        "allow_edit": "ESRM Agent",
         "doc_status": "1",
         "doctype": "Workflow Document State",
         "is_optional_state": 0,
