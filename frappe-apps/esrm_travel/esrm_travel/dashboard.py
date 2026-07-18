@@ -4,9 +4,43 @@ import frappe
 
 
 def setup_workspace():
+    ensure_accounting_defaults()
     setup_number_cards()
     setup_charts()
     setup_esrm_travel_workspace()
+
+
+def ensure_accounting_defaults():
+    company = "Ezzy Services and resources Management"
+    root_cost_center = f"{company} - ESRM"
+    default_cost_center = "Main - ESRM"
+
+    if not frappe.db.exists("Company", company):
+        return
+
+    if not frappe.db.exists("Cost Center", default_cost_center):
+        cost_center = frappe.get_doc(
+            {
+                "doctype": "Cost Center",
+                "cost_center_name": "Main",
+                "company": company,
+                "parent_cost_center": root_cost_center if frappe.db.exists("Cost Center", root_cost_center) else None,
+                "is_group": 0,
+                "disabled": 0,
+            }
+        )
+        cost_center.insert(ignore_permissions=True)
+
+    if not frappe.db.exists("DocType", "ESRM Travel Settings"):
+        return
+
+    settings = frappe.get_single("ESRM Travel Settings")
+    current = settings.default_cost_center
+    current_is_group = bool(current and frappe.db.get_value("Cost Center", current, "is_group"))
+
+    if not current or current_is_group:
+        settings.default_cost_center = default_cost_center
+        settings.save(ignore_permissions=True)
 
 
 def setup_number_cards():
