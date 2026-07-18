@@ -185,9 +185,9 @@ def make_sales_invoice(source_name):
     settings = frappe.get_single("ESRM Travel Settings")
 
     if not settings.default_company:
-        frappe.throw(_("Set Default Company in ESRM Travel Settings first."))
+        frappe.throw(_("Set Default Company in ESRM Settings first."))
     if not settings.default_service_item:
-        frappe.throw(_("Set Default Service Item in ESRM Travel Settings first."))
+        frappe.throw(_("Set Default Service Item in ESRM Settings first."))
     if not booking.customer:
         frappe.throw(_("Customer is required before creating a Sales Invoice."))
 

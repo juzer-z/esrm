@@ -1,4 +1,4 @@
-# ESRM Travel
+# ESRM
 
 Custom Frappe / ERPNext app for ESRM's ticketing and travel operations.
 
@@ -6,7 +6,7 @@ Custom Frappe / ERPNext app for ESRM's ticketing and travel operations.
 
 - `Ticket Booking` DocType for operational booking control
 - `Ticket Sector` child table for route legs
-- `ESRM Travel Settings` singleton for company, item, cost center, and income defaults
+- `ESRM Settings` singleton for company, item, cost center, and income defaults
 - ticket approval workflow for agent-to-admin review
 - automatic invoice and payment synchronization back to the booking
 - custom links on `Sales Invoice` and `Payment Entry`
@@ -34,7 +34,7 @@ bench --site yoursite migrate
 
 After install:
 
-1. Open `ESRM Travel Settings`
+1. Open `ESRM Settings`
 2. Set the default company
 3. Set the service item used for ticket billing
 4. Set default cost center and income account if needed

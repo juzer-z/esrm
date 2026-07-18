@@ -10,7 +10,8 @@ def setup_workspace():
     recalculate_ticket_profitability()
     setup_number_cards()
     setup_charts()
-    setup_esrm_travel_workspace()
+    setup_esrm_workspace()
+    hide_old_esrm_travel_workspace()
 
 
 def ensure_accounting_defaults():
@@ -145,7 +146,7 @@ def upsert_number_card(card):
     doc.update(
         {
             "label": card["label"],
-            "module": "ESRM Travel",
+            "module": "ESRM",
             "type": "Document Type",
             "document_type": card["document_type"],
             "function": card["function"],
@@ -195,7 +196,7 @@ def upsert_chart(chart):
     doc.update(
         {
             "chart_name": chart["chart_name"],
-            "module": "ESRM Travel",
+            "module": "ESRM",
             "chart_type": "Group By",
             "document_type": chart["document_type"],
             "type": chart["type"],
@@ -213,13 +214,13 @@ def upsert_chart(chart):
     save_doc(doc)
 
 
-def setup_esrm_travel_workspace():
-    workspace = get_or_create("Workspace", "ESRM Travel")
+def setup_esrm_workspace():
+    workspace = get_or_create("Workspace", "ESRM")
     workspace.update(
         {
-            "label": "ESRM Travel",
-            "title": "ESRM Travel",
-            "module": "ESRM Travel",
+            "label": "ESRM",
+            "title": "ESRM",
+            "module": "ESRM",
             "icon": "plane",
             "indicator_color": "blue",
             "public": 1,
@@ -234,6 +235,15 @@ def setup_esrm_travel_workspace():
     workspace.set("shortcuts", SHORTCUTS)
     workspace.set("links", LINKS)
 
+    save_doc(workspace)
+
+
+def hide_old_esrm_travel_workspace():
+    if not frappe.db.exists("Workspace", "ESRM Travel"):
+        return
+
+    workspace = frappe.get_doc("Workspace", "ESRM Travel")
+    workspace.is_hidden = 1
     save_doc(workspace)
 
 
@@ -274,7 +284,7 @@ LINKS = [
     {"type": "Link", "label": "Ticket Sales and Collection Summary", "link_type": "Report", "link_to": "Ticket Sales and Collection Summary", "is_query_report": 1, "report_ref_doctype": "Ticket Booking"},
     {"type": "Link", "label": "Pending Ticket Approvals", "link_type": "Report", "link_to": "Pending Ticket Approvals", "is_query_report": 1, "report_ref_doctype": "Ticket Booking"},
     {"type": "Card Break", "label": "Setup", "icon": "setting", "description": "Configure defaults before billing or using finance flows."},
-    {"type": "Link", "label": "ESRM Travel Settings", "link_type": "DocType", "link_to": "ESRM Travel Settings"},
+    {"type": "Link", "label": "ESRM Settings", "link_type": "DocType", "link_to": "ESRM Travel Settings"},
 ]
 
 

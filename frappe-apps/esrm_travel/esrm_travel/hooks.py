@@ -1,9 +1,9 @@
 from . import __version__ as app_version
 
 app_name = "esrm_travel"
-app_title = "ESRM Travel"
+app_title = "ESRM"
 app_publisher = "3J Technologies"
-app_description = "Ticketing and travel operations for ERPNext"
+app_description = "Ticketing and operations for ERPNext"
 app_email = "info@example.com"
 app_license = "MIT"
 app_icon = "fa fa-plane"
