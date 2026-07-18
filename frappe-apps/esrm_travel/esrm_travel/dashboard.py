@@ -42,6 +42,22 @@ def ensure_accounting_defaults():
         settings.default_cost_center = default_cost_center
         settings.save(ignore_permissions=True)
 
+    frappe.db.sql(
+        """
+        update `tabSales Invoice Item` item
+        inner join `tabSales Invoice` invoice on invoice.name = item.parent
+        set item.cost_center = %(default_cost_center)s
+        where invoice.docstatus = 0
+          and invoice.esrm_ticket_booking is not null
+          and invoice.esrm_ticket_booking != ''
+          and item.cost_center = %(root_cost_center)s
+        """,
+        {
+            "default_cost_center": default_cost_center,
+            "root_cost_center": root_cost_center,
+        },
+    )
+
 
 def setup_number_cards():
     cards = [
