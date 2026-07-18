@@ -14,7 +14,7 @@ after_migrate = "esrm_travel.dashboard.setup_workspace"
 
 fixtures = [
     {"dt": "Role", "filters": [["name", "in", ["Ticketing Agent", "Ticketing Manager", "ESRM Agent"]]]},
-    {"dt": "Workflow State", "filters": [["name", "in", ["Pending Approval"]]]},
+    {"dt": "Workflow State", "filters": [["name", "in", ["Draft", "Pending Approval"]]]},
     {"dt": "Workflow Action Master", "filters": [["name", "in", ["Send for Approval"]]]},
     {"dt": "Workflow", "filters": [["name", "in", ["Ticket Booking Approval"]]]},
     {"dt": "Custom DocPerm", "filters": [["role", "=", "ESRM Agent"]]},
