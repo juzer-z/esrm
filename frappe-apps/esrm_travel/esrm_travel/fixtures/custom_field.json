@@ -40,6 +40,17 @@
   },
   {
     "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "esrm_ticket_bookings",
+    "fieldtype": "Table",
+    "insert_after": "esrm_ticket_booking",
+    "label": "ESRM Ticket Bookings",
+    "name": "Sales Invoice-esrm_ticket_bookings",
+    "options": "ESRM Invoice Ticket",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
     "dt": "Payment Entry",
     "fieldname": "esrm_ticket_booking",
     "fieldtype": "Link",

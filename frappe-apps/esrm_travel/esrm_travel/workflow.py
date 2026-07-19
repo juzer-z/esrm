@@ -36,18 +36,18 @@ def before_validate_payment_entry(doc, method=None):
 
 
 def on_submit_sales_invoice(doc, method=None):
-    if doc.esrm_ticket_booking:
-        sync_ticket_booking(doc.esrm_ticket_booking, sales_invoice_name=doc.name)
+    for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
+        sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
 
 
 def on_update_after_submit_sales_invoice(doc, method=None):
-    if doc.esrm_ticket_booking:
-        sync_ticket_booking(doc.esrm_ticket_booking, sales_invoice_name=doc.name)
+    for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
+        sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
 
 
 def on_cancel_sales_invoice(doc, method=None):
-    if doc.esrm_ticket_booking:
-        sync_ticket_booking(doc.esrm_ticket_booking, sales_invoice_name=doc.name, clear_sales_invoice=True)
+    for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
+        sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 
 
 def on_submit_payment_entry(doc, method=None):
@@ -74,9 +74,21 @@ def get_related_ticket_bookings_from_payment_entry(doc):
     for row in doc.get("references", []):
         if row.reference_doctype != "Sales Invoice" or not row.reference_name:
             continue
-        booking_name = frappe.db.get_value("Sales Invoice", row.reference_name, "esrm_ticket_booking")
-        if booking_name:
-            booking_names.add(booking_name)
+        invoice = frappe.get_doc("Sales Invoice", row.reference_name)
+        booking_names.update(get_related_ticket_bookings_from_sales_invoice(invoice))
+
+    return booking_names
+
+
+def get_related_ticket_bookings_from_sales_invoice(doc):
+    booking_names = set()
+
+    if getattr(doc, "esrm_ticket_booking", None):
+        booking_names.add(doc.esrm_ticket_booking)
+
+    for row in doc.get("esrm_ticket_bookings", []):
+        if row.ticket_booking:
+            booking_names.add(row.ticket_booking)
 
     return booking_names
 

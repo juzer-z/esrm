@@ -30,6 +30,7 @@ fixtures = [
                     "Customer-esrm_customer_code",
                     "Sales Invoice-esrm_invoice_number",
                     "Sales Invoice-esrm_ticket_booking",
+                    "Sales Invoice-esrm_ticket_bookings",
                     "Payment Entry-esrm_ticket_booking",
                 ],
             ]

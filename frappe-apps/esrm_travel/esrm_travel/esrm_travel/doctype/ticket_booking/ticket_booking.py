@@ -135,7 +135,7 @@ class TicketBooking(Document):
         invoice = frappe.db.get_value(
             "Sales Invoice",
             self.sales_invoice,
-            ["name", "status", "grand_total", "outstanding_amount"],
+            ["name", "status", "grand_total", "outstanding_amount", "docstatus"],
             as_dict=True,
         )
         if not invoice:
@@ -144,9 +144,14 @@ class TicketBooking(Document):
             self.outstanding_amount = flt(self.invoice_amount) - flt(self.paid_amount)
             return
 
+        invoice_amount = get_booking_invoice_row_amount(self.name, self.sales_invoice) or flt(invoice.grand_total)
+        paid_ratio = 0
+        if flt(invoice.grand_total) > 0:
+            paid_ratio = max(flt(invoice.grand_total) - flt(invoice.outstanding_amount), 0) / flt(invoice.grand_total)
+
         self.invoice_status = invoice.status or "Draft"
-        self.invoice_amount = flt(invoice.grand_total)
-        self.outstanding_amount = flt(invoice.outstanding_amount)
+        self.invoice_amount = invoice_amount
+        self.outstanding_amount = max(invoice_amount - (invoice_amount * paid_ratio), 0)
         self.paid_amount = max(flt(self.invoice_amount) - flt(self.outstanding_amount), 0)
 
     def set_status(self):
@@ -179,54 +184,147 @@ def make_sales_invoice(source_name):
 
     if booking.sales_invoice:
         return booking.sales_invoice
-    if booking.approval_status != "Approved":
-        frappe.throw(_("Only approved ticket bookings can be invoiced."))
+
+    return make_sales_invoice_from_bookings([booking.name])
+
+
+@frappe.whitelist()
+def make_group_sales_invoice(bookings):
+    if isinstance(bookings, str):
+        import json
+
+        bookings = json.loads(bookings)
+
+    return make_sales_invoice_from_bookings(bookings)
+
+
+def make_sales_invoice_from_bookings(booking_names):
+    if not booking_names:
+        frappe.throw(_("Select at least one Ticket Booking."))
+
+    bookings = [frappe.get_doc("Ticket Booking", name) for name in booking_names]
+    validate_bookings_for_invoice(bookings)
 
     settings = frappe.get_single("ESRM Travel Settings")
+    validate_invoice_settings(settings)
 
-    if not settings.default_company:
-        frappe.throw(_("Set Default Company in ESRM Settings first."))
-    if not settings.default_service_item:
-        frappe.throw(_("Set Default Service Item in ESRM Settings first."))
-    if not booking.customer:
-        frappe.throw(_("Customer is required before creating a Sales Invoice."))
+    invoice_items = []
+    invoice_tickets = []
+    for booking in bookings:
+        rate = flt(booking.invoice_amount) or flt(booking.gross_amount)
+        if rate <= 0:
+            frappe.throw(_("Invoice Amount or Gross Amount must be greater than zero for Ticket Booking {0}.").format(booking.name))
 
-    rate = flt(booking.invoice_amount) or flt(booking.gross_amount)
-    if rate <= 0:
-        frappe.throw(_("Invoice Amount or Gross Amount must be greater than zero."))
+        item_row = {
+            "item_code": settings.default_service_item,
+            "qty": 1,
+            "rate": rate,
+            "description": build_invoice_description(booking),
+        }
 
-    item_row = {
-        "item_code": settings.default_service_item,
-        "qty": 1,
-        "rate": rate,
-        "description": build_invoice_description(booking),
-    }
+        if settings.default_cost_center:
+            item_row["cost_center"] = settings.default_cost_center
+        if settings.default_income_account:
+            item_row["income_account"] = settings.default_income_account
 
-    if settings.default_cost_center:
-        item_row["cost_center"] = settings.default_cost_center
-    if settings.default_income_account:
-        item_row["income_account"] = settings.default_income_account
+        invoice_items.append(item_row)
+        invoice_tickets.append(build_invoice_ticket_row(booking, rate))
 
     sales_invoice = frappe.get_doc(
         {
             "doctype": "Sales Invoice",
-            "customer": booking.customer,
+            "customer": bookings[0].customer,
             "company": settings.default_company,
             "posting_date": nowdate(),
-            "due_date": booking.flight_date or booking.issue_date or nowdate(),
-            "esrm_invoice_number": booking.invoice_number,
-            "items": [item_row],
-            "esrm_ticket_booking": booking.name,
-            "remarks": build_invoice_description(booking),
+            "due_date": get_invoice_due_date(bookings),
+            "esrm_invoice_number": bookings[0].invoice_number,
+            "items": invoice_items,
+            "esrm_ticket_booking": bookings[0].name,
+            "esrm_ticket_bookings": invoice_tickets,
+            "remarks": "\n\n".join(build_invoice_description(booking) for booking in bookings),
         }
     )
     sales_invoice.insert(ignore_permissions=True)
 
-    booking.db_set("sales_invoice", sales_invoice.name)
-    booking.db_set("invoice_status", sales_invoice.status or "Draft")
-    booking.db_set("status", "Invoiced")
+    for booking in bookings:
+        booking.db_set("sales_invoice", sales_invoice.name)
+        booking.db_set("invoice_status", sales_invoice.status or "Draft")
+        booking.db_set("status", "Invoiced")
 
     return sales_invoice.name
+
+
+def validate_bookings_for_invoice(bookings):
+    customer = None
+    already_invoiced = []
+
+    for booking in bookings:
+        if booking.sales_invoice:
+            already_invoiced.append(f"{booking.name} ({booking.sales_invoice})")
+        if booking.approval_status != "Approved":
+            frappe.throw(_("Only approved ticket bookings can be invoiced. {0} is {1}.").format(booking.name, booking.approval_status))
+        if not booking.customer:
+            frappe.throw(_("Customer is required before creating a Sales Invoice for Ticket Booking {0}.").format(booking.name))
+
+        customer = customer or booking.customer
+        if booking.customer != customer:
+            frappe.throw(_("All selected ticket bookings must have the same customer."))
+
+    if already_invoiced:
+        frappe.throw(_("These ticket bookings are already invoiced: {0}").format(", ".join(already_invoiced)))
+
+
+def validate_invoice_settings(settings):
+    if not settings.default_company:
+        frappe.throw(_("Set Default Company in ESRM Settings first."))
+    if not settings.default_service_item:
+        frappe.throw(_("Set Default Service Item in ESRM Settings first."))
+
+
+def get_invoice_due_date(bookings):
+    dates = [booking.flight_date or booking.issue_date for booking in bookings if booking.flight_date or booking.issue_date]
+    return min(dates) if dates else nowdate()
+
+
+def build_invoice_ticket_row(booking, rate):
+    return {
+        "ticket_booking": booking.name,
+        "purpose": booking.purpose,
+        "reference": booking.reference,
+        "issue_date": booking.issue_date,
+        "passenger_name": booking.passenger_name,
+        "ticket_number": booking.ticket_number,
+        "route": booking.route_summary,
+        "carrier": get_ticket_carrier(booking),
+        "fare": rate,
+        "remarks": booking.remarks,
+    }
+
+
+def get_ticket_carrier(booking):
+    if booking.sectors:
+        carriers = []
+        for sector in booking.sectors:
+            if sector.carrier and sector.carrier not in carriers:
+                carriers.append(sector.carrier)
+        if carriers:
+            return " / ".join(carriers)
+
+    return booking.airline
+
+
+def get_booking_invoice_row_amount(booking_name, sales_invoice):
+    return flt(
+        frappe.db.get_value(
+            "ESRM Invoice Ticket",
+            {
+                "parenttype": "Sales Invoice",
+                "parent": sales_invoice,
+                "ticket_booking": booking_name,
+            },
+            "fare",
+        )
+    )
 
 
 def build_invoice_description(booking):
