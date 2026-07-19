@@ -10,6 +10,7 @@ def setup_workspace():
     apply_branding()
     setup_chart_of_accounts()
     setup_print_formats()
+    ensure_fiscal_years()
     ensure_accounting_defaults()
     recalculate_ticket_profitability()
     setup_number_cards()
@@ -17,6 +18,42 @@ def setup_workspace():
     setup_esrm_workspace()
     hide_old_esrm_travel_workspace()
 
+
+def ensure_fiscal_years():
+    company = get_company()
+    if not company:
+        return
+
+    for year, start_date, end_date in get_required_fiscal_years():
+        if frappe.db.exists("Fiscal Year", year):
+            fiscal_year = frappe.get_doc("Fiscal Year", year)
+        else:
+            fiscal_year = frappe.get_doc({"doctype": "Fiscal Year", "year": year})
+
+        fiscal_year.year_start_date = start_date
+        fiscal_year.year_end_date = end_date
+        fiscal_year.disabled = 0
+
+        valid_company_rows = [
+            row for row in fiscal_year.get("companies", []) if frappe.db.exists("Company", row.company)
+        ]
+        fiscal_year.set("companies", valid_company_rows)
+
+        linked_companies = {row.company for row in fiscal_year.get("companies", [])}
+        if company not in linked_companies:
+            fiscal_year.append("companies", {"company": company})
+
+        save_doc(fiscal_year)
+
+    frappe.cache().hdel("fiscal_years", company)
+
+
+def get_required_fiscal_years():
+    return [
+        ("2025-2026", "2025-07-01", "2026-06-30"),
+        ("2026-2027", "2026-07-01", "2027-06-30"),
+        ("2027-2028", "2027-07-01", "2028-06-30"),
+    ]
 
 def ensure_accounting_defaults():
     company = get_company()
