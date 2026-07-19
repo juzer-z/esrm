@@ -170,8 +170,12 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-invoice {
         color: #1f2933;
         font-family: Arial, sans-serif;
-        font-size: 10.5px;
-        line-height: 1.45;
+        font-size: 10pt;
+        line-height: 1.35;
+    }
+    .print-format .esrm-invoice {
+        max-width: 185mm;
+        margin: 0 auto;
     }
     .esrm-header-table {
         border-bottom: 2px solid #24516a;
@@ -184,9 +188,9 @@ ESRM_TICKET_INVOICE_HTML = """
         width: 190px;
     }
     .esrm-logo {
-        max-height: 76px;
-        max-width: 170px;
-        object-fit: contain;
+        display: block;
+        height: auto;
+        width: 145px;
     }
     .esrm-company-cell {
         text-align: right;
@@ -194,7 +198,7 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-company-name {
         color: #24516a;
-        font-size: 18px;
+        font-size: 15pt;
         font-weight: 700;
         letter-spacing: 0;
         margin: 0 0 4px;
@@ -202,7 +206,7 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-company-address {
         color: #52616f;
-        font-size: 10px;
+        font-size: 8.5pt;
         white-space: pre-line;
     }
     .esrm-title-row {
@@ -211,7 +215,7 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-title {
         color: #111827;
-        font-size: 22px;
+        font-size: 18pt;
         font-weight: 700;
         letter-spacing: 0;
         text-transform: uppercase;
@@ -233,7 +237,7 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-section-title {
         color: #24516a;
-        font-size: 10px;
+        font-size: 8.5pt;
         font-weight: 700;
         margin-bottom: 4px;
         text-transform: uppercase;
@@ -248,7 +252,7 @@ ESRM_TICKET_INVOICE_HTML = """
         width: 50%;
     }
     .esrm-customer-name {
-        font-size: 12px;
+        font-size: 10pt;
         font-weight: 700;
         margin-bottom: 3px;
     }
@@ -269,15 +273,14 @@ ESRM_TICKET_INVOICE_HTML = """
         border: 1px solid #c8d0d8;
         padding: 6px 6px;
         vertical-align: top;
-        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     .esrm-ticket-table th {
         background: #eaf1f5;
         color: #243b53;
-        font-size: 9.5px;
+        font-size: 7pt;
         font-weight: 700;
         text-align: left;
-        text-transform: uppercase;
     }
     .esrm-ticket-table .center {
         text-align: center;
@@ -311,13 +314,13 @@ ESRM_TICKET_INVOICE_HTML = """
         width: 100%;
     }
     .esrm-payment-table td {
-        padding: 3px 0;
+        padding: 4px 0;
         vertical-align: top;
     }
-    .esrm-payment-table .label {
+    .esrm-payment-label {
         color: #52616f;
         font-weight: 700;
-        width: 135px;
+        width: 145px;
     }
     .esrm-footer-table {
         margin-top: 34px;
@@ -325,7 +328,7 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-note {
         color: #52616f;
-        font-size: 10px;
+        font-size: 8.5pt;
         vertical-align: bottom;
         width: 55%;
     }
@@ -405,11 +408,11 @@ ESRM_TICKET_INVOICE_HTML = """
             <tr>
                 <th style="width: 4%;" class="center">#</th>
                 <th style="width: 11%;">Issue Date</th>
-                <th style="width: 22%;">Passenger</th>
+                <th style="width: 21%;">Passenger</th>
                 <th style="width: 15%;">Ticket No.</th>
-                <th style="width: 14%;">Route</th>
+                <th style="width: 12%;">Route</th>
                 <th style="width: 9%;">Airline</th>
-                <th style="width: 13%;" class="amount">Amount</th>
+                <th style="width: 16%;" class="amount">Amount</th>
                 <th style="width: 12%;">Remarks</th>
             </tr>
         </thead>
@@ -422,13 +425,13 @@ ESRM_TICKET_INVOICE_HTML = """
                 <td>{{ ticket.ticket_number or "" }}</td>
                 <td>{{ ticket.route or "" }}</td>
                 <td>{{ ticket.carrier or "" }}</td>
-                <td class="amount">{{ frappe.utils.fmt_money(ticket.fare or 0, currency=doc.currency) }}</td>
+                <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(ticket.fare or 0) }}</td>
                 <td>{{ ticket.remarks or "" }}</td>
             </tr>
             {% endfor %}
             <tr class="esrm-total-row">
                 <td colspan="6" class="amount">Total</td>
-                <td class="amount">{{ frappe.utils.fmt_money(invoice_total, currency=doc.currency) }}</td>
+                <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(invoice_total) }}</td>
                 <td></td>
             </tr>
         </tbody>
@@ -441,15 +444,15 @@ ESRM_TICKET_INVOICE_HTML = """
         <div class="esrm-payment-note">{{ settings.invoice_payment_instructions or "Please make payment in favor of " ~ company_name ~ " by account payee cheque or bank deposit." }}</div>
         <table class="esrm-payment-table">
             <tr>
-                <td class="label">Account Number</td>
+                <td class="esrm-payment-label">Account Number</td>
                 <td>{{ settings.invoice_bank_account_number or "" }}</td>
             </tr>
             <tr>
-                <td class="label">Bank Name</td>
+                <td class="esrm-payment-label">Bank Name</td>
                 <td>{{ settings.invoice_bank_name or "" }}</td>
             </tr>
             <tr>
-                <td class="label">Branch</td>
+                <td class="esrm-payment-label">Branch</td>
                 <td>{{ settings.invoice_bank_branch or "" }}</td>
             </tr>
         </table>
