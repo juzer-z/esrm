@@ -78,7 +78,7 @@ def save_doc(doc):
 
 
 ESRM_TICKET_INVOICE_HTML = """
-{% set settings = frappe.get_single("ESRM Travel Settings") %}
+{% set settings = frappe.get_doc("ESRM Travel Settings") %}
 {% set invoice_no = doc.esrm_invoice_number or doc.name %}
 {% set tickets = doc.esrm_ticket_bookings or [] %}
 {% if not tickets and doc.esrm_ticket_booking %}
