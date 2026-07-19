@@ -15,6 +15,7 @@ LEGACY_PAYMENT_INSTRUCTIONS = (
 
 def setup_print_formats():
     setup_esrm_ticket_invoice_print_format()
+    ensure_default_sales_invoice_print_format()
     ensure_invoice_print_defaults()
 
 
@@ -31,6 +32,39 @@ def setup_esrm_ticket_invoice_print_format():
         }
     )
     save_doc(doc)
+
+
+def ensure_default_sales_invoice_print_format():
+    if not frappe.db.exists("Print Format", PRINT_FORMAT_NAME):
+        return
+
+    current_default = frappe.get_meta("Sales Invoice").default_print_format
+    if current_default == PRINT_FORMAT_NAME:
+        return
+
+    existing_property_setter = frappe.db.exists(
+        "Property Setter",
+        {
+            "doc_type": "Sales Invoice",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+        },
+    )
+    if existing_property_setter:
+        frappe.db.set_value("Property Setter", existing_property_setter, "value", PRINT_FORMAT_NAME)
+    else:
+        frappe.make_property_setter(
+            {
+                "doctype": "Sales Invoice",
+                "doctype_or_field": "DocType",
+                "property": "default_print_format",
+                "value": PRINT_FORMAT_NAME,
+                "property_type": "Data",
+            },
+            module="ESRM Travel",
+        )
+
+    frappe.clear_cache(doctype="Sales Invoice")
 
 
 def ensure_invoice_print_defaults():
