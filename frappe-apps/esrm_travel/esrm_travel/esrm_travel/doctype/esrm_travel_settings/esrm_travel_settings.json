@@ -75,13 +75,13 @@
    "label": "Invoice Print Defaults"
   },
   {
-   "default": "Ezzy Service and Resource Management Ltd",
+   "default": "Ezzy Services & Resource Management",
    "fieldname": "invoice_letterhead_address",
    "fieldtype": "Small Text",
    "label": "Letterhead Address"
   },
   {
-   "default": "WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF \"EZZY SERVICE AND RESOURCE MANAGEMENT LTD\" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:",
+   "default": "WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF \"EZZY SERVICES & RESOURCE MANAGEMENT\" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:",
    "fieldname": "invoice_payment_instructions",
    "fieldtype": "Small Text",
    "label": "Payment Instructions"

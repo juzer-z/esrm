@@ -1,7 +1,11 @@
 import frappe
 
 
-COMPANY = "Ezzy Services and resources Management"
+COMPANY = "Ezzy Services & Resource Management"
+COMPANY_ALIASES = (
+    "Ezzy Services and resources Management",
+    "Ezzy Services & Resources Management",
+)
 ABBR = "ESRM"
 
 
@@ -181,7 +185,7 @@ ACCOUNT_RENAMES = [
 
 
 def setup_chart_of_accounts():
-    company = get_company()
+    company = ensure_company_name()
     if not company:
         return
 
@@ -271,7 +275,7 @@ def rename_revised_accounts():
             continue
 
         try:
-            frappe.rename_doc("Account", old_id, new_id, force=True, ignore_permissions=True)
+            frappe.rename_doc("Account", old_id, new_id, force=True)
             frappe.db.set_value("Account", new_id, "account_name", new_name)
         except Exception:
             frappe.log_error(
@@ -284,8 +288,41 @@ def get_account_name(account_name):
     return f"{account_name.strip()} - {ABBR}"
 
 
+def ensure_company_name():
+    if frappe.db.exists("Company", COMPANY):
+        frappe.db.set_value("Company", COMPANY, "company_name", COMPANY)
+        return COMPANY
+
+    company = None
+    for legacy_company in COMPANY_ALIASES:
+        if frappe.db.exists("Company", legacy_company):
+            company = legacy_company
+            break
+
+    if not company:
+        company = frappe.db.get_value("Company", {"abbr": ABBR}, "name")
+
+    if not company:
+        return None
+
+    if company != COMPANY:
+        try:
+            frappe.rename_doc("Company", company, COMPANY, force=True)
+            frappe.db.set_value("Company", COMPANY, "company_name", COMPANY)
+            return COMPANY
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"ESRM Company Rename Failed: {company} to {COMPANY}")
+            return company
+
+    return company
+
+
 def get_company():
     if frappe.db.exists("Company", COMPANY):
         return COMPANY
+
+    for legacy_company in COMPANY_ALIASES:
+        if frappe.db.exists("Company", legacy_company):
+            return legacy_company
 
     return frappe.db.get_value("Company", {"abbr": ABBR}, "name")

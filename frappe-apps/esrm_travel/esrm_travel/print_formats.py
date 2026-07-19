@@ -2,6 +2,12 @@ import frappe
 
 
 PRINT_FORMAT_NAME = "ESRM Ticket Invoice"
+COMPANY_NAME = "Ezzy Services & Resource Management"
+LEGACY_COMPANY_NAMES = (
+    "Ezzy Service and Resource Management Ltd",
+    "Ezzy Services and resources Management",
+    "Ezzy Services & Resources Management",
+)
 
 
 def setup_print_formats():
@@ -30,8 +36,8 @@ def ensure_invoice_print_defaults():
 
     settings = frappe.get_single("ESRM Travel Settings")
     defaults = {
-        "invoice_letterhead_address": "Ezzy Service and Resource Management Ltd",
-        "invoice_payment_instructions": 'WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF "EZZY SERVICE AND RESOURCE MANAGEMENT LTD" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:',
+        "invoice_letterhead_address": COMPANY_NAME,
+        "invoice_payment_instructions": f'WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF "{COMPANY_NAME.upper()}" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:',
         "invoice_bank_account_number": "505-111-00000-199",
         "invoice_bank_name": "PREMIER BANK LTD.",
         "invoice_bank_branch": "BANANI SME BRANCH, DHAKA",
@@ -41,7 +47,8 @@ def ensure_invoice_print_defaults():
 
     changed = False
     for fieldname, value in defaults.items():
-        if not settings.get(fieldname):
+        current_value = settings.get(fieldname)
+        if not current_value or has_legacy_company_name(current_value):
             settings.set(fieldname, value)
             changed = True
 
@@ -49,6 +56,13 @@ def ensure_invoice_print_defaults():
         settings.flags.ignore_mandatory = True
         settings.save(ignore_permissions=True)
 
+
+def has_legacy_company_name(value):
+    if not isinstance(value, str):
+        return False
+
+    normalized_value = value.lower()
+    return any(legacy_name.lower() in normalized_value for legacy_name in LEGACY_COMPANY_NAMES)
 
 def get_or_create(doctype, name):
     if frappe.db.exists(doctype, name):
@@ -194,7 +208,7 @@ ESRM_TICKET_INVOICE_HTML = """
     <div class="esrm-header">
         <img class="esrm-logo" src="/assets/esrm_travel/images/esrm-logo.svg">
         <div class="esrm-company">
-            <h1>Ezzy Service and Resource Management Ltd</h1>
+            <h1>Ezzy Services & Resource Management</h1>
             <div class="esrm-company-address">{{ settings.invoice_letterhead_address or "" }}</div>
         </div>
     </div>
