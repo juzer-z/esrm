@@ -1,3 +1,6 @@
+import base64
+from pathlib import Path
+
 import frappe
 
 
@@ -11,6 +14,21 @@ LEGACY_COMPANY_NAMES = (
 LEGACY_PAYMENT_INSTRUCTIONS = (
     'WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF "EZZY SERVICES & RESOURCE MANAGEMENT" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:',
 )
+
+
+def get_invoice_html():
+    return ESRM_TICKET_INVOICE_HTML.replace("__ESRM_LOGO_DATA_URI__", get_logo_data_uri())
+
+
+def get_logo_data_uri():
+    logo_path = Path(frappe.get_app_path("esrm_travel", "public", "images", "esrm-logo-print.png"))
+    if not logo_path.exists():
+        frappe.log_error(f"ESRM logo source not found: {logo_path}", "ESRM Invoice Print Format")
+        return ""
+
+    encoded_logo = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded_logo}"
+
 
 
 def setup_print_formats():
@@ -28,7 +46,7 @@ def setup_esrm_ticket_invoice_print_format():
             "print_format_type": "Jinja",
             "custom_format": 1,
             "disabled": 0,
-            "html": ESRM_TICKET_INVOICE_HTML,
+            "html": get_invoice_html(),
         }
     )
     save_doc(doc)
@@ -332,7 +350,7 @@ ESRM_TICKET_INVOICE_HTML = """
     <table class="esrm-header-table">
         <tr>
             <td class="esrm-logo-cell">
-                <img class="esrm-logo" src="/assets/esrm_travel/images/esrm-logo.svg">
+                <img class="esrm-logo" src="__ESRM_LOGO_DATA_URI__">
             </td>
             <td class="esrm-company-cell">
                 <div class="esrm-company-name">{{ company_name }}</div>
