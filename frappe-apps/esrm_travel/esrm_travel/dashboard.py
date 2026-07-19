@@ -2,7 +2,7 @@ import json
 
 import frappe
 from esrm_travel.branding import apply_branding
-from esrm_travel.chart_of_accounts import setup_chart_of_accounts
+from esrm_travel.chart_of_accounts import get_company, setup_chart_of_accounts
 from esrm_travel.print_formats import setup_print_formats
 
 
@@ -19,7 +19,10 @@ def setup_workspace():
 
 
 def ensure_accounting_defaults():
-    company = "Ezzy Services and resources Management"
+    company = get_company()
+    if not company:
+        return
+
     root_cost_center = f"{company} - ESRM"
     default_cost_center = "Main - ESRM"
     default_income_account = "Air Ticket Sales-International - ESRM"
@@ -50,6 +53,9 @@ def ensure_accounting_defaults():
     if not current or current_is_group:
         settings.default_cost_center = default_cost_center
 
+    if not settings.default_company:
+        settings.default_company = company
+
     income_account_root_type = None
     income_account_is_group = 0
     if settings.default_income_account:
@@ -69,7 +75,12 @@ def ensure_accounting_defaults():
     ):
         settings.default_income_account = default_income_account
 
-    if settings.has_value_changed("default_cost_center") or settings.has_value_changed("default_income_account"):
+    if (
+        settings.has_value_changed("default_company")
+        or settings.has_value_changed("default_cost_center")
+        or settings.has_value_changed("default_income_account")
+    ):
+        settings.flags.ignore_mandatory = True
         settings.save(ignore_permissions=True)
 
     frappe.db.sql(

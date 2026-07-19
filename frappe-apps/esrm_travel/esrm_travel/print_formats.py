@@ -46,6 +46,7 @@ def ensure_invoice_print_defaults():
             changed = True
 
     if changed:
+        settings.flags.ignore_mandatory = True
         settings.save(ignore_permissions=True)
 
 

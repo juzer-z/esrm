@@ -31,7 +31,7 @@ ACCOUNT_GROUPS = [
     ("Transport Expenses", "Operating Expenses - ESRM", ""),
     ("Tax and Govt Fee", "Operating Expenses - ESRM", "Tax"),
     ("Selling and Marketing Expense", "Operating Expenses - ESRM", ""),
-    ("Depreciation", "Indirect Expenses - ESRM", ""),
+    ("Depreciation Expenses", "Indirect Expenses - ESRM", ""),
     ("Financial Expenses", "Indirect Expenses - ESRM", ""),
 ]
 
@@ -150,10 +150,10 @@ ACCOUNT_LEDGERS = [
     ("Business Development", "Selling and Marketing Expense", ""),
     ("Trade Fair Expense", "Selling and Marketing Expense", ""),
     ("Tender Expenses-PG-Charge & Commission", "Selling and Marketing Expense", ""),
-    ("Depreciation- Computer & Laptop", "Depreciation", ""),
-    ("Depreciation-Furniture & Fixture", "Depreciation", ""),
-    ("Depreciation-Office Equipment", "Depreciation", ""),
-    ("Depreciation-Vehicles", "Depreciation", ""),
+    ("Depreciation- Computer & Laptop", "Depreciation Expenses", ""),
+    ("Depreciation-Furniture & Fixture", "Depreciation Expenses", ""),
+    ("Depreciation-Office Equipment", "Depreciation Expenses", ""),
+    ("Depreciation-Vehicles", "Depreciation Expenses", ""),
     ("Bank Charge & Commission", "Financial Expenses", ""),
     ("Loan Processing Expenses", "Financial Expenses", ""),
     ("Loan Interest", "Financial Expenses", ""),
@@ -181,7 +181,8 @@ ACCOUNT_RENAMES = [
 
 
 def setup_chart_of_accounts():
-    if not frappe.db.exists("Company", COMPANY):
+    company = get_company()
+    if not company:
         return
 
     rename_revised_accounts()
@@ -198,6 +199,10 @@ def setup_chart_of_accounts():
 
 
 def ensure_account(account_name, parent_account, account_type="", is_group=0):
+    company = get_company()
+    if not company:
+        return None
+
     account_id = get_account_name(account_name)
     if frappe.db.exists("Account", account_id):
         account = frappe.get_doc("Account", account_id)
@@ -231,7 +236,7 @@ def ensure_account(account_name, parent_account, account_type="", is_group=0):
     account = frappe.get_doc(
         {
             "doctype": "Account",
-            "company": COMPANY,
+            "company": company,
             "account_name": account_name.strip(),
             "parent_account": parent_account,
             "is_group": is_group,
@@ -277,3 +282,10 @@ def rename_revised_accounts():
 
 def get_account_name(account_name):
     return f"{account_name.strip()} - {ABBR}"
+
+
+def get_company():
+    if frappe.db.exists("Company", COMPANY):
+        return COMPANY
+
+    return frappe.db.get_value("Company", {"abbr": ABBR}, "name")
