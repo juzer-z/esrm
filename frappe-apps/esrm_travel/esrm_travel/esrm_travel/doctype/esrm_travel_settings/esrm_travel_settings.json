@@ -81,7 +81,7 @@
    "label": "Letterhead Address"
   },
   {
-   "default": "WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF \"EZZY SERVICES & RESOURCE MANAGEMENT\" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:",
+   "default": "Please make payment in favor of Ezzy Services & Resource Management by account payee cheque or bank deposit.",
    "fieldname": "invoice_payment_instructions",
    "fieldtype": "Small Text",
    "label": "Payment Instructions"

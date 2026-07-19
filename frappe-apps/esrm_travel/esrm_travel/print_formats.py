@@ -8,6 +8,9 @@ LEGACY_COMPANY_NAMES = (
     "Ezzy Services and resources Management",
     "Ezzy Services & Resources Management",
 )
+LEGACY_PAYMENT_INSTRUCTIONS = (
+    'WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF "EZZY SERVICES & RESOURCE MANAGEMENT" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:',
+)
 
 
 def setup_print_formats():
@@ -37,7 +40,7 @@ def ensure_invoice_print_defaults():
     settings = frappe.get_single("ESRM Travel Settings")
     defaults = {
         "invoice_letterhead_address": COMPANY_NAME,
-        "invoice_payment_instructions": f'WE ARE REQUESTING YOU TO PAY THE BILL AT YOUR EARLIEST. PLEASE NOTE THAT PAYMENT WILL BE MADE IN FAVOR OF "{COMPANY_NAME.upper()}" BY ACCOUNT PAYEE CHEQUE/ DEPOSIT TO:',
+        "invoice_payment_instructions": f"Please make payment in favor of {COMPANY_NAME} by account payee cheque or bank deposit.",
         "invoice_bank_account_number": "505-111-00000-199",
         "invoice_bank_name": "PREMIER BANK LTD.",
         "invoice_bank_branch": "BANANI SME BRANCH, DHAKA",
@@ -48,7 +51,11 @@ def ensure_invoice_print_defaults():
     changed = False
     for fieldname, value in defaults.items():
         current_value = settings.get(fieldname)
-        if not current_value or has_legacy_company_name(current_value):
+        if (
+            not current_value
+            or has_legacy_company_name(current_value)
+            or (fieldname == "invoice_payment_instructions" and has_legacy_payment_instruction(current_value))
+        ):
             settings.set(fieldname, value)
             changed = True
 
@@ -64,6 +71,15 @@ def has_legacy_company_name(value):
     normalized_value = value.lower()
     return any(legacy_name.lower() in normalized_value for legacy_name in LEGACY_COMPANY_NAMES)
 
+
+def has_legacy_payment_instruction(value):
+    if not isinstance(value, str):
+        return False
+
+    normalized_value = value.lower()
+    return any(instruction.lower() == normalized_value for instruction in LEGACY_PAYMENT_INSTRUCTIONS)
+
+
 def get_or_create(doctype, name):
     if frappe.db.exists(doctype, name):
         return frappe.get_doc(doctype, name)
@@ -76,11 +92,13 @@ def save_doc(doc):
     else:
         doc.save(ignore_permissions=True)
 
-
 ESRM_TICKET_INVOICE_HTML = """
 {% set settings = frappe.get_doc("ESRM Travel Settings") %}
 {% set invoice_no = doc.esrm_invoice_number or doc.name %}
 {% set tickets = doc.esrm_ticket_bookings or [] %}
+{% set company_name = "Ezzy Services & Resource Management" %}
+{% set company_address = settings.invoice_letterhead_address if settings.invoice_letterhead_address and settings.invoice_letterhead_address != company_name else "" %}
+{% set invoice_total = doc.rounded_total or doc.grand_total or 0 %}
 {% if not tickets and doc.esrm_ticket_booking %}
     {% set booking = frappe.get_doc("Ticket Booking", doc.esrm_ticket_booking) %}
     {% set tickets = [{
@@ -98,29 +116,32 @@ ESRM_TICKET_INVOICE_HTML = """
 
 <style>
     .esrm-invoice {
-        color: #111;
+        color: #1f2933;
         font-family: Arial, sans-serif;
-        font-size: 11px;
-        line-height: 1.35;
+        font-size: 10.5px;
+        line-height: 1.45;
     }
-    .esrm-header {
-        border-bottom: 2px solid #1f4e79;
-        display: flex;
-        gap: 18px;
-        margin-bottom: 16px;
+    .esrm-header-table {
+        border-bottom: 2px solid #24516a;
+        margin-bottom: 18px;
         padding-bottom: 12px;
+        width: 100%;
+    }
+    .esrm-logo-cell {
+        vertical-align: top;
+        width: 190px;
     }
     .esrm-logo {
-        max-height: 72px;
-        max-width: 180px;
+        max-height: 76px;
+        max-width: 170px;
         object-fit: contain;
     }
-    .esrm-company {
-        flex: 1;
-        padding-top: 4px;
+    .esrm-company-cell {
+        text-align: right;
+        vertical-align: top;
     }
-    .esrm-company h1 {
-        color: #1f4e79;
+    .esrm-company-name {
+        color: #24516a;
         font-size: 18px;
         font-weight: 700;
         letter-spacing: 0;
@@ -128,138 +149,222 @@ ESRM_TICKET_INVOICE_HTML = """
         text-transform: uppercase;
     }
     .esrm-company-address {
+        color: #52616f;
+        font-size: 10px;
         white-space: pre-line;
     }
-    .esrm-meta {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 12px;
-        margin-bottom: 14px;
+    .esrm-title-row {
+        margin: 8px 0 18px;
+        width: 100%;
+    }
+    .esrm-title {
+        color: #111827;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
     }
     .esrm-meta-table {
         border-collapse: collapse;
-        min-width: 210px;
+        margin-left: auto;
+        width: 245px;
     }
     .esrm-meta-table td {
-        border: 1px solid #888;
-        padding: 5px 7px;
+        border: 1px solid #d2d6dc;
+        padding: 6px 8px;
     }
-    .esrm-title {
-        font-size: 20px;
+    .esrm-meta-label {
+        background: #f3f6f8;
+        color: #52616f;
         font-weight: 700;
-        margin: 2px 0 8px;
-        text-align: center;
+        width: 96px;
     }
-    .esrm-section {
-        margin-bottom: 10px;
-    }
-    .esrm-subject {
+    .esrm-section-title {
+        color: #24516a;
+        font-size: 10px;
         font-weight: 700;
+        margin-bottom: 4px;
         text-transform: uppercase;
+    }
+    .esrm-bill-table {
+        margin-bottom: 16px;
+        width: 100%;
+    }
+    .esrm-bill-to,
+    .esrm-summary {
+        vertical-align: top;
+        width: 50%;
+    }
+    .esrm-customer-name {
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 3px;
+    }
+    .esrm-summary-line {
+        margin-bottom: 3px;
+    }
+    .esrm-intro {
+        margin: 10px 0 12px;
     }
     .esrm-ticket-table {
         border-collapse: collapse;
-        margin: 12px 0 8px;
+        margin: 10px 0 10px;
         table-layout: fixed;
         width: 100%;
     }
     .esrm-ticket-table th,
     .esrm-ticket-table td {
-        border: 1px solid #333;
-        padding: 5px 6px;
+        border: 1px solid #c8d0d8;
+        padding: 6px 6px;
         vertical-align: top;
         word-wrap: break-word;
     }
     .esrm-ticket-table th {
-        background: #eef3f7;
-        font-size: 10px;
-        text-align: center;
+        background: #eaf1f5;
+        color: #243b53;
+        font-size: 9.5px;
+        font-weight: 700;
+        text-align: left;
         text-transform: uppercase;
+    }
+    .esrm-ticket-table .center {
+        text-align: center;
     }
     .esrm-ticket-table .amount {
         text-align: right;
         white-space: nowrap;
     }
     .esrm-total-row td {
+        background: #f7f9fb;
         font-weight: 700;
     }
     .esrm-amount-words {
+        border: 1px solid #d2d6dc;
+        margin: 10px 0 16px;
+        padding: 8px 10px;
+    }
+    .esrm-amount-words span {
         font-weight: 700;
-        margin: 8px 0 14px;
-        text-transform: capitalize;
     }
-    .esrm-payment {
-        margin-top: 12px;
-        text-transform: uppercase;
+    .esrm-payment-box {
+        border: 1px solid #d2d6dc;
+        margin-top: 14px;
+        padding: 10px 12px;
     }
-    .esrm-payment-lines {
-        margin-top: 7px;
+    .esrm-payment-note {
+        margin-bottom: 8px;
+    }
+    .esrm-payment-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .esrm-payment-table td {
+        padding: 3px 0;
+        vertical-align: top;
+    }
+    .esrm-payment-table .label {
+        color: #52616f;
+        font-weight: 700;
+        width: 135px;
+    }
+    .esrm-footer-table {
+        margin-top: 34px;
+        width: 100%;
+    }
+    .esrm-note {
+        color: #52616f;
+        font-size: 10px;
+        vertical-align: bottom;
+        width: 55%;
     }
     .esrm-signature {
-        margin-top: 42px;
-        text-transform: uppercase;
+        text-align: left;
+        vertical-align: bottom;
+        width: 45%;
+    }
+    .esrm-signature-line {
+        border-top: 1px solid #111827;
+        margin-top: 46px;
+        padding-top: 6px;
+        width: 230px;
     }
     .esrm-signature-name {
         font-weight: 700;
+        text-transform: uppercase;
     }
 </style>
 
 <div class="esrm-invoice">
-    <div class="esrm-header">
-        <img class="esrm-logo" src="/assets/esrm_travel/images/esrm-logo.svg">
-        <div class="esrm-company">
-            <h1>Ezzy Services & Resource Management</h1>
-            <div class="esrm-company-address">{{ settings.invoice_letterhead_address or "" }}</div>
-        </div>
-    </div>
+    <table class="esrm-header-table">
+        <tr>
+            <td class="esrm-logo-cell">
+                <img class="esrm-logo" src="/assets/esrm_travel/images/esrm-logo.svg">
+            </td>
+            <td class="esrm-company-cell">
+                <div class="esrm-company-name">{{ company_name }}</div>
+                {% if company_address %}
+                    <div class="esrm-company-address">{{ company_address }}</div>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
 
-    <div class="esrm-meta">
-        <div>
-            <div><b>Client Name :</b> {{ doc.customer_name or doc.customer }}</div>
-            <div><b>PURPOSE :</b> {{ tickets[0].purpose if tickets and tickets[0].purpose else "" }}</div>
-            <div><b>REFFERENCE :</b> {{ tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else "") }}</div>
-        </div>
-        <table class="esrm-meta-table">
-            <tr>
-                <td><b>Invoice NO</b></td>
-                <td>{{ invoice_no }}</td>
-            </tr>
-            <tr>
-                <td><b>Date</b></td>
-                <td>{{ frappe.utils.formatdate(doc.posting_date, "dd MMM yyyy") }}</td>
-            </tr>
-        </table>
-    </div>
+    <table class="esrm-title-row">
+        <tr>
+            <td><div class="esrm-title">Invoice</div></td>
+            <td>
+                <table class="esrm-meta-table">
+                    <tr>
+                        <td class="esrm-meta-label">Invoice No.</td>
+                        <td>{{ invoice_no }}</td>
+                    </tr>
+                    <tr>
+                        <td class="esrm-meta-label">Date</td>
+                        <td>{{ frappe.utils.formatdate(doc.posting_date, "dd MMM yyyy") }}</td>
+                    </tr>
+                    <tr>
+                        <td class="esrm-meta-label">Currency</td>
+                        <td>{{ doc.currency or "BDT" }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 
-    <div class="esrm-title">INVOICE</div>
+    <table class="esrm-bill-table">
+        <tr>
+            <td class="esrm-bill-to">
+                <div class="esrm-section-title">Bill To</div>
+                <div class="esrm-customer-name">{{ doc.customer_name or doc.customer }}</div>
+                <div>{{ (doc.address_display or "") | safe }}</div>
+            </td>
+            <td class="esrm-summary">
+                <div class="esrm-section-title">Booking Details</div>
+                <div class="esrm-summary-line"><b>Purpose:</b> {{ tickets[0].purpose if tickets and tickets[0].purpose else "" }}</div>
+                <div class="esrm-summary-line"><b>Reference:</b> {{ tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else "") }}</div>
+            </td>
+        </tr>
+    </table>
 
-    <div class="esrm-section">
-        <div>TO,</div>
-        <div><b>{{ doc.customer_name or doc.customer }}</b></div>
-        <div>{{ (doc.address_display or "") | safe }}</div>
-    </div>
-
-    <div class="esrm-section esrm-subject">SUBJECT : INVOICE FOR ISSUED AIR TICKET</div>
-    <div class="esrm-section">DEAR SIR,</div>
-    <div class="esrm-section">WE ARE PLEASED TO SUBMIT THE INVOICE AS</div>
+    <div class="esrm-intro">We are pleased to submit the invoice for the following issued air ticket(s):</div>
 
     <table class="esrm-ticket-table">
         <thead>
             <tr>
-                <th style="width: 4%;">SL</th>
-                <th style="width: 11%;">IssueD</th>
-                <th style="width: 22%;">PAX NAME</th>
-                <th style="width: 15%;">TICKET NO</th>
-                <th style="width: 14%;">ROUTE</th>
-                <th style="width: 9%;">Carrier</th>
-                <th style="width: 13%;">FARE(BDT)</th>
-                <th style="width: 12%;">REMARKS</th>
+                <th style="width: 4%;" class="center">#</th>
+                <th style="width: 11%;">Issue Date</th>
+                <th style="width: 22%;">Passenger</th>
+                <th style="width: 15%;">Ticket No.</th>
+                <th style="width: 14%;">Route</th>
+                <th style="width: 9%;">Airline</th>
+                <th style="width: 13%;" class="amount">Amount</th>
+                <th style="width: 12%;">Remarks</th>
             </tr>
         </thead>
         <tbody>
             {% for ticket in tickets %}
             <tr>
-                <td style="text-align: center;">{{ loop.index }}</td>
+                <td class="center">{{ loop.index }}</td>
                 <td>{{ frappe.utils.formatdate(ticket.issue_date, "dd MMM yyyy") if ticket.issue_date else "" }}</td>
                 <td>{{ ticket.passenger_name or "" }}</td>
                 <td>{{ ticket.ticket_number or "" }}</td>
@@ -271,31 +376,45 @@ ESRM_TICKET_INVOICE_HTML = """
             {% endfor %}
             <tr class="esrm-total-row">
                 <td colspan="6" class="amount">Total</td>
-                <td class="amount">{{ frappe.utils.fmt_money(doc.grand_total or 0, currency=doc.currency) }}</td>
+                <td class="amount">{{ frappe.utils.fmt_money(invoice_total, currency=doc.currency) }}</td>
                 <td></td>
             </tr>
         </tbody>
     </table>
 
-    <div class="esrm-amount-words">{{ frappe.utils.money_in_words(doc.grand_total or 0, doc.currency) }}</div>
+    <div class="esrm-amount-words"><span>Amount in words:</span> {{ frappe.utils.money_in_words(invoice_total, doc.currency) }}</div>
 
-    <div class="esrm-payment">
-        {{ settings.invoice_payment_instructions or "" }}
-        <div class="esrm-payment-lines">
-            <div><b>BANK ACCOUNT NUMBER :</b> {{ settings.invoice_bank_account_number or "" }}</div>
-            <div><b>BANK NAME :</b> {{ settings.invoice_bank_name or "" }}</div>
-            <div>{{ settings.invoice_bank_branch or "" }}</div>
-        </div>
+    <div class="esrm-payment-box">
+        <div class="esrm-section-title">Payment Details</div>
+        <div class="esrm-payment-note">{{ settings.invoice_payment_instructions or "Please make payment in favor of " ~ company_name ~ " by account payee cheque or bank deposit." }}</div>
+        <table class="esrm-payment-table">
+            <tr>
+                <td class="label">Account Number</td>
+                <td>{{ settings.invoice_bank_account_number or "" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Bank Name</td>
+                <td>{{ settings.invoice_bank_name or "" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Branch</td>
+                <td>{{ settings.invoice_bank_branch or "" }}</td>
+            </tr>
+        </table>
     </div>
 
-    <div class="esrm-section" style="margin-top: 16px;">THANKING AND ASSURNING YOU THE BEST COOPERATION ALL TIME.</div>
-
-    <div class="esrm-signature">
-        <div>YOURS SINCERELY</div>
-        <br><br>
-        <div class="esrm-signature-name">{{ settings.invoice_signatory_name or "" }}</div>
-        <div>{{ settings.invoice_signatory_designation or "" }}</div>
-        <div>ESRM</div>
-    </div>
+    <table class="esrm-footer-table">
+        <tr>
+            <td class="esrm-note">Thank you. We assure you of our best cooperation at all times.</td>
+            <td class="esrm-signature">
+                <div class="esrm-signature-line">
+                    <div>Authorized Signatory</div>
+                    <div class="esrm-signature-name">{{ settings.invoice_signatory_name or "" }}</div>
+                    <div>{{ settings.invoice_signatory_designation or "" }}</div>
+                    <div>{{ company_name }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
 </div>
 """
