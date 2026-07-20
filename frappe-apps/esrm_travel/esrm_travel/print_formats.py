@@ -335,17 +335,17 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-note {
         color: #52616f;
         font-size: 8.5pt;
-        vertical-align: bottom;
-        width: 48%;
+        padding-bottom: 10px;
+        text-align: left;
+        width: 100%;
     }
     .esrm-signature {
         text-align: left;
-        vertical-align: bottom;
-        width: 52%;
+        width: 100%;
     }
     .esrm-signature-line {
         border-top: 1px solid #111827;
-        margin-top: 28px;
+        margin-top: 26px;
         padding-top: 4px;
         width: 215px;
     }
@@ -467,6 +467,8 @@ ESRM_TICKET_INVOICE_HTML = """
     <table class="esrm-footer-table">
         <tr>
             <td class="esrm-note">Thank you. We assure you of our best cooperation at all times.</td>
+        </tr>
+        <tr>
             <td class="esrm-signature">
                 <div class="esrm-signature-line">
                     <div>Authorized Signatory</div>
