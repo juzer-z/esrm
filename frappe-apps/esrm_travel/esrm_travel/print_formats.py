@@ -192,6 +192,7 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-logo {
         display: block;
         height: auto;
+        margin-top: -8px;
         width: 160px;
     }
     .esrm-company-cell {
@@ -333,12 +334,12 @@ ESRM_TICKET_INVOICE_HTML = """
         color: #52616f;
         font-size: 8.5pt;
         vertical-align: bottom;
-        width: 55%;
+        width: 48%;
     }
     .esrm-signature {
         text-align: left;
         vertical-align: bottom;
-        width: 45%;
+        width: 52%;
     }
     .esrm-signature-line {
         border-top: 1px solid #111827;
