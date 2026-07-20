@@ -227,7 +227,7 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-meta-table {
         border-collapse: collapse;
         margin-left: auto;
-        width: 235px;
+        width: 255px;
     }
     .esrm-meta-table td {
         border: 1px solid #d2d6dc;
@@ -237,7 +237,8 @@ ESRM_TICKET_INVOICE_HTML = """
         background: #f3f6f8;
         color: #52616f;
         font-weight: 700;
-        width: 96px;
+        white-space: nowrap;
+        width: 112px;
     }
     .esrm-section-title {
         color: #24516a;
