@@ -170,8 +170,8 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-invoice {
         color: #1f2933;
         font-family: Arial, sans-serif;
-        font-size: 10pt;
-        line-height: 1.35;
+        font-size: 9pt;
+        line-height: 1.25;
     }
     .print-format .esrm-invoice {
         max-width: 185mm;
@@ -179,18 +179,18 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-header-table {
         border-bottom: 2px solid #24516a;
-        margin-bottom: 18px;
-        padding-bottom: 12px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
         width: 100%;
     }
     .esrm-logo-cell {
         vertical-align: top;
-        width: 190px;
+        width: 165px;
     }
     .esrm-logo {
         display: block;
         height: auto;
-        width: 145px;
+        width: 122px;
     }
     .esrm-company-cell {
         text-align: right;
@@ -198,7 +198,7 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-company-name {
         color: #24516a;
-        font-size: 15pt;
+        font-size: 13pt;
         font-weight: 700;
         letter-spacing: 0;
         margin: 0 0 4px;
@@ -210,12 +210,12 @@ ESRM_TICKET_INVOICE_HTML = """
         white-space: pre-line;
     }
     .esrm-title-row {
-        margin: 8px 0 18px;
+        margin: 6px 0 12px;
         width: 100%;
     }
     .esrm-title {
         color: #111827;
-        font-size: 18pt;
+        font-size: 16pt;
         font-weight: 700;
         letter-spacing: 0;
         text-transform: uppercase;
@@ -223,11 +223,11 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-meta-table {
         border-collapse: collapse;
         margin-left: auto;
-        width: 245px;
+        width: 235px;
     }
     .esrm-meta-table td {
         border: 1px solid #d2d6dc;
-        padding: 6px 8px;
+        padding: 4px 7px;
     }
     .esrm-meta-label {
         background: #f3f6f8;
@@ -243,7 +243,7 @@ ESRM_TICKET_INVOICE_HTML = """
         text-transform: uppercase;
     }
     .esrm-bill-table {
-        margin-bottom: 16px;
+        margin-bottom: 10px;
         width: 100%;
     }
     .esrm-bill-to,
@@ -252,7 +252,7 @@ ESRM_TICKET_INVOICE_HTML = """
         width: 50%;
     }
     .esrm-customer-name {
-        font-size: 10pt;
+        font-size: 9pt;
         font-weight: 700;
         margin-bottom: 3px;
     }
@@ -260,18 +260,18 @@ ESRM_TICKET_INVOICE_HTML = """
         margin-bottom: 3px;
     }
     .esrm-intro {
-        margin: 10px 0 12px;
+        margin: 6px 0 8px;
     }
     .esrm-ticket-table {
         border-collapse: collapse;
-        margin: 10px 0 10px;
+        margin: 7px 0 7px;
         table-layout: fixed;
         width: 100%;
     }
     .esrm-ticket-table th,
     .esrm-ticket-table td {
         border: 1px solid #c8d0d8;
-        padding: 6px 6px;
+        padding: 4px 5px;
         vertical-align: top;
         overflow-wrap: break-word;
     }
@@ -295,35 +295,35 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-amount-words {
         border: 1px solid #d2d6dc;
-        margin: 10px 0 16px;
-        padding: 8px 10px;
+        margin: 7px 0 10px;
+        padding: 6px 8px;
     }
     .esrm-amount-words span {
         font-weight: 700;
     }
     .esrm-payment-box {
         border: 1px solid #d2d6dc;
-        margin-top: 14px;
-        padding: 10px 12px;
+        margin-top: 8px;
+        padding: 7px 10px;
     }
     .esrm-payment-note {
-        margin-bottom: 8px;
+        margin-bottom: 5px;
     }
     .esrm-payment-table {
         border-collapse: collapse;
         width: 100%;
     }
     .esrm-payment-table td {
-        padding: 4px 0;
+        padding: 2px 0;
         vertical-align: top;
     }
     .esrm-payment-label {
         color: #52616f;
         font-weight: 700;
-        width: 145px;
+        width: 122px;
     }
     .esrm-footer-table {
-        margin-top: 34px;
+        margin-top: 18px;
         width: 100%;
     }
     .esrm-note {
@@ -339,9 +339,9 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-signature-line {
         border-top: 1px solid #111827;
-        margin-top: 46px;
-        padding-top: 6px;
-        width: 230px;
+        margin-top: 28px;
+        padding-top: 4px;
+        width: 215px;
     }
     .esrm-signature-name {
         font-weight: 700;
@@ -444,7 +444,7 @@ ESRM_TICKET_INVOICE_HTML = """
         <div class="esrm-payment-note">{{ settings.invoice_payment_instructions or "Please make payment in favor of " ~ company_name ~ " by account payee cheque or bank deposit." }}</div>
         <table class="esrm-payment-table">
             <tr>
-                <td class="esrm-payment-label">Account Number</td>
+                <td class="esrm-payment-label">Account No.</td>
                 <td>{{ settings.invoice_bank_account_number or "" }}</td>
             </tr>
             <tr>
