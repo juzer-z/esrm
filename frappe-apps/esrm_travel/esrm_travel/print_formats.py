@@ -232,6 +232,7 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-meta-table td {
         border: 1px solid #d2d6dc;
         padding: 4px 7px;
+        vertical-align: middle;
     }
     .esrm-meta-label {
         background: #f3f6f8;
@@ -261,8 +262,18 @@ ESRM_TICKET_INVOICE_HTML = """
         font-weight: 700;
         margin-bottom: 3px;
     }
-    .esrm-summary-line {
-        margin-bottom: 3px;
+    .esrm-summary-table {
+        border-collapse: collapse;
+    }
+    .esrm-summary-table td {
+        padding: 0 0 3px;
+        vertical-align: top;
+    }
+    .esrm-summary-label {
+        font-weight: 700;
+        padding-right: 4px;
+        white-space: nowrap;
+        width: 66px;
     }
     .esrm-intro {
         margin: 6px 0 8px;
@@ -402,8 +413,16 @@ ESRM_TICKET_INVOICE_HTML = """
             </td>
             <td class="esrm-summary">
                 <div class="esrm-section-title">Booking Details</div>
-                <div class="esrm-summary-line"><b>Purpose:</b> {{ tickets[0].purpose if tickets and tickets[0].purpose else "" }}</div>
-                <div class="esrm-summary-line"><b>Reference:</b> {{ tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else "") }}</div>
+                <table class="esrm-summary-table">
+                    <tr>
+                        <td class="esrm-summary-label">Purpose:</td>
+                        <td>{{ tickets[0].purpose if tickets and tickets[0].purpose else "" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="esrm-summary-label">Reference:</td>
+                        <td>{{ tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else "") }}</td>
+                    </tr>
+                </table>
             </td>
         </tr>
     </table>
