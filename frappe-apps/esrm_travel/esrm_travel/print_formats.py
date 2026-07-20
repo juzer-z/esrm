@@ -284,12 +284,14 @@ ESRM_TICKET_INVOICE_HTML = """
         color: #243b53;
         font-size: 7pt;
         font-weight: 700;
-        text-align: left;
+        text-align: center;
     }
     .esrm-ticket-table .center {
         text-align: center;
     }
     .esrm-ticket-table .amount {
+        padding-left: 3px;
+        padding-right: 7px;
         text-align: right;
         white-space: nowrap;
     }
@@ -412,12 +414,12 @@ ESRM_TICKET_INVOICE_HTML = """
             <tr>
                 <th style="width: 4%;" class="center">#</th>
                 <th style="width: 11%;">Issue Date</th>
-                <th style="width: 21%;">Passenger</th>
+                <th style="width: 19%;">Passenger</th>
                 <th style="width: 15%;">Ticket No.</th>
                 <th style="width: 12%;">Route</th>
                 <th style="width: 9%;">Airline</th>
-                <th style="width: 16%;" class="amount">Amount</th>
-                <th style="width: 12%;">Remarks</th>
+                <th style="width: 19%;" class="amount">Amount</th>
+                <th style="width: 11%;">Remarks</th>
             </tr>
         </thead>
         <tbody>
