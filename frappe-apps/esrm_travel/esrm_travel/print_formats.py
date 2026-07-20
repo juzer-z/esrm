@@ -447,7 +447,7 @@ ESRM_TICKET_INVOICE_HTML = """
 
     <div class="esrm-payment-box">
         <div class="esrm-section-title">Payment Details</div>
-        <div class="esrm-payment-note">{{ settings.invoice_payment_instructions or "Please make payment in favor of " ~ company_name ~ " by account payee cheque or bank deposit." }}</div>
+        <div class="esrm-payment-note">{{ (settings.invoice_payment_instructions or "Please make payment in favor of " ~ company_name ~ " by account payee cheque or bank deposit.") | replace(company_name, "<strong>" ~ company_name ~ "</strong>") | safe }}</div>
         <table class="esrm-payment-table">
             <tr>
                 <td class="esrm-payment-label">Account No.</td>
