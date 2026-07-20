@@ -181,8 +181,8 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-header-table {
         border-bottom: 2px solid #24516a;
-        margin-bottom: 10px;
-        padding-bottom: 8px;
+        margin-bottom: 6px;
+        padding-bottom: 2px;
         width: 100%;
     }
     .esrm-logo-cell {
@@ -192,7 +192,7 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-logo {
         display: block;
         height: auto;
-        margin-top: -8px;
+        margin-top: -18px;
         width: 208px;
     }
     .esrm-company-cell {
@@ -249,7 +249,7 @@ ESRM_TICKET_INVOICE_HTML = """
         text-transform: uppercase;
     }
     .esrm-bill-table {
-        margin-bottom: 10px;
+        margin-bottom: 6px;
         width: 100%;
     }
     .esrm-bill-to,
