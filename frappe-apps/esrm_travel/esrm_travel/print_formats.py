@@ -187,13 +187,13 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-logo-cell {
         vertical-align: top;
-        width: 185px;
+        width: 232px;
     }
     .esrm-logo {
         display: block;
         height: auto;
         margin-top: -8px;
-        width: 160px;
+        width: 208px;
     }
     .esrm-company-cell {
         text-align: right;
