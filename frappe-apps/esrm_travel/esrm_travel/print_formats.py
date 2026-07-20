@@ -6,6 +6,7 @@ import frappe
 
 PRINT_FORMAT_NAME = "ESRM Ticket Invoice"
 COMPANY_NAME = "Ezzy Services & Resource Management"
+COMPANY_HEADER_DETAILS = "House 214, Road 13, New DOHS, Mohakhali, Dhaka - 1206. Email: esrmltd@ezzy.group"
 LEGACY_COMPANY_NAMES = (
     "Ezzy Service and Resource Management Ltd",
     "Ezzy Services and resources Management",
@@ -91,7 +92,7 @@ def ensure_invoice_print_defaults():
 
     settings = frappe.get_single("ESRM Travel Settings")
     defaults = {
-        "invoice_letterhead_address": COMPANY_NAME,
+        "invoice_letterhead_address": COMPANY_HEADER_DETAILS,
         "invoice_payment_instructions": f"Please make payment in favor of {COMPANY_NAME} by account payee cheque or bank deposit.",
         "invoice_bank_account_number": "505-111-00000-199",
         "invoice_bank_name": "PREMIER BANK LTD.",
@@ -106,6 +107,7 @@ def ensure_invoice_print_defaults():
         if (
             not current_value
             or has_legacy_company_name(current_value)
+            or (fieldname == "invoice_letterhead_address" and current_value == COMPANY_NAME)
             or (fieldname == "invoice_payment_instructions" and has_legacy_payment_instruction(current_value))
         ):
             settings.set(fieldname, value)
@@ -185,12 +187,12 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-logo-cell {
         vertical-align: top;
-        width: 165px;
+        width: 185px;
     }
     .esrm-logo {
         display: block;
         height: auto;
-        width: 122px;
+        width: 160px;
     }
     .esrm-company-cell {
         text-align: right;
@@ -206,7 +208,8 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-company-address {
         color: #52616f;
-        font-size: 8.5pt;
+        font-size: 7.5pt;
+        line-height: 1.3;
         white-space: pre-line;
     }
     .esrm-title-row {
@@ -320,7 +323,7 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-payment-label {
         color: #52616f;
         font-weight: 700;
-        width: 122px;
+        width: 160px;
     }
     .esrm-footer-table {
         margin-top: 18px;
