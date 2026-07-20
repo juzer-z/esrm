@@ -262,8 +262,13 @@ ESRM_TICKET_INVOICE_HTML = """
         font-weight: 700;
         margin-bottom: 3px;
     }
+    .esrm-summary-block {
+        margin-left: auto;
+        width: 255px;
+    }
     .esrm-summary-table {
         border-collapse: collapse;
+        width: 100%;
     }
     .esrm-summary-table td {
         padding: 0 0 3px;
@@ -412,17 +417,19 @@ ESRM_TICKET_INVOICE_HTML = """
                 <div>{{ (doc.address_display or "") | safe }}</div>
             </td>
             <td class="esrm-summary">
-                <div class="esrm-section-title">Booking Details</div>
-                <table class="esrm-summary-table">
-                    <tr>
-                        <td class="esrm-summary-label">Purpose:</td>
-                        <td>{{ tickets[0].purpose if tickets and tickets[0].purpose else "" }}</td>
-                    </tr>
-                    <tr>
-                        <td class="esrm-summary-label">Reference:</td>
-                        <td>{{ tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else "") }}</td>
-                    </tr>
-                </table>
+                <div class="esrm-summary-block">
+                    <div class="esrm-section-title">Booking Details</div>
+                    <table class="esrm-summary-table">
+                        <tr>
+                            <td class="esrm-summary-label">Purpose:</td>
+                            <td>{{ tickets[0].purpose if tickets and tickets[0].purpose else "" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="esrm-summary-label">Reference:</td>
+                            <td>{{ tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else "") }}</td>
+                        </tr>
+                    </table>
+                </div>
             </td>
         </tr>
     </table>
