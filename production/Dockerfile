@@ -6,5 +6,4 @@ COPY --chown=frappe:frappe frappe-apps/esrm_travel /home/frappe/frappe-bench/app
 
 USER frappe
 WORKDIR /home/frappe/frappe-bench
-RUN ./env/bin/pip install --no-cache-dir --editable ./apps/esrm_travel \
-    && bench build --app esrm_travel
+RUN ./env/bin/pip install --no-cache-dir --editable ./apps/esrm_travel
