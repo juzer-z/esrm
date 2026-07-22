@@ -19,6 +19,16 @@ AGENT_PERMISSIONS = {
 }
 
 
+def redirect_agent_from_setup_wizard():
+    request = getattr(frappe.local, "request", None)
+    if (
+        frappe.session.user == AGENT_USER
+        and request
+        and request.path.rstrip("/") == "/app/setup-wizard"
+    ):
+        frappe.redirect("/app/esrm")
+
+
 def setup_access_controls():
     ensure_role(AGENT_ROLE)
     ensure_role(APPROVER_ROLE)
