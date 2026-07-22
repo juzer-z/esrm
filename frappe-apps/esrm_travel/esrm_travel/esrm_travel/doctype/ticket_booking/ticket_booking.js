@@ -1,4 +1,10 @@
 frappe.ui.form.on("Ticket Booking", {
+    onload(frm) {
+        if (frm.is_new() && !frm.doc.booking_owner) {
+            frm.set_value("booking_owner", frappe.session.user);
+        }
+    },
+
     gross_amount(frm) {
         calculate_profitability(frm);
     },
@@ -24,6 +30,8 @@ frappe.ui.form.on("Ticket Booking", {
     },
 
     refresh(frm) {
+        frm.set_df_property("booking_owner", "read_only", frappe.session.user !== "Administrator");
+
         if (!frm.is_new() && !frm.doc.sales_invoice && frm.doc.approval_status === "Approved") {
             frm.add_custom_button(__("Create Sales Invoice"), () => {
                 frappe.call({

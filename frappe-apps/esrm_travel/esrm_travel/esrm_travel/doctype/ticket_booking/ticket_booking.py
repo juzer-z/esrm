@@ -17,8 +17,10 @@ class TicketBooking(Document):
         self.name = make_autoname(series)
 
     def before_validate(self):
-        if not self.booking_owner or (self.is_new() and self.booking_owner == "Administrator"):
+        if self.is_new() and (frappe.session.user != "Administrator" or not self.booking_owner):
             self.booking_owner = frappe.session.user
+        elif not self.is_new() and frappe.session.user != "Administrator":
+            self.booking_owner = frappe.db.get_value("Ticket Booking", self.name, "booking_owner") or frappe.session.user
         if not self.approval_status:
             self.approval_status = "Draft"
         if not self.invoice_number:
