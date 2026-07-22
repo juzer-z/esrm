@@ -119,12 +119,7 @@ class TicketBooking(Document):
         return "OTHERS"
 
     def set_route_summary(self):
-        if self.sectors:
-            hops = []
-            for row in self.sectors:
-                if row.origin and row.destination:
-                    hops.append(f"{row.origin}-{row.destination}")
-            self.route_summary = " / ".join(hops)
+        self.route_summary = build_route_summary(self.sectors, self.trip_type)
 
     def sync_invoice_details(self):
         if not self.sales_invoice:
@@ -343,3 +338,24 @@ def build_invoice_description(booking):
 def clean_invoice_prefix(value):
     prefix = re.sub(r"[^A-Za-z0-9]+", "-", value.strip().upper()).strip("-")
     return prefix or "OTHERS"
+
+
+def build_route_summary(sectors, trip_type="One Way"):
+    airports = []
+    for sector in sectors or []:
+        origin = (sector.origin or "").strip().upper()
+        destination = (sector.destination or "").strip().upper()
+        if not origin or not destination:
+            continue
+
+        if not airports:
+            airports.extend([origin, destination])
+        elif airports[-1] == origin:
+            airports.append(destination)
+        else:
+            airports.extend([origin, destination])
+
+    if trip_type == "Return" and airports and airports[-1] != airports[0]:
+        airports.append(airports[0])
+
+    return "-".join(airports)

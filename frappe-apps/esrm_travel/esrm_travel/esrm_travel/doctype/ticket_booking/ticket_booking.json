@@ -35,6 +35,7 @@
   "supplier_reference",
   "sales_invoice",
   "sectors_section",
+  "trip_type",
   "sectors",
   "amounts_section",
   "gross_amount",
@@ -234,6 +235,14 @@
    "fieldname": "sectors_section",
    "fieldtype": "Section Break",
    "label": "Sectors"
+  },
+  {
+   "default": "One Way",
+   "fieldname": "trip_type",
+   "fieldtype": "Select",
+   "label": "Trip Type",
+   "options": "One Way\nReturn",
+   "reqd": 1
   },
   {
    "fieldname": "sectors",

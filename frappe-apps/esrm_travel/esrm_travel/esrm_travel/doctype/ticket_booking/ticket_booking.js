@@ -19,6 +19,10 @@ frappe.ui.form.on("Ticket Booking", {
         calculate_profitability(frm);
     },
 
+    trip_type(frm) {
+        update_route_summary(frm);
+    },
+
     refresh(frm) {
         if (!frm.is_new() && !frm.doc.sales_invoice && frm.doc.approval_status === "Approved") {
             frm.add_custom_button(__("Create Sales Invoice"), () => {
@@ -51,6 +55,46 @@ frappe.ui.form.on("Ticket Booking", {
         }
     },
 });
+
+frappe.ui.form.on("Ticket Sector", {
+    origin(frm) {
+        update_route_summary(frm);
+    },
+
+    destination(frm) {
+        update_route_summary(frm);
+    },
+
+    sectors_remove(frm) {
+        update_route_summary(frm);
+    },
+});
+
+function update_route_summary(frm) {
+    const airports = [];
+
+    (frm.doc.sectors || []).forEach((sector) => {
+        const origin = (sector.origin || "").trim().toUpperCase();
+        const destination = (sector.destination || "").trim().toUpperCase();
+        if (!origin || !destination) {
+            return;
+        }
+
+        if (!airports.length) {
+            airports.push(origin, destination);
+        } else if (airports[airports.length - 1] === origin) {
+            airports.push(destination);
+        } else {
+            airports.push(origin, destination);
+        }
+    });
+
+    if (frm.doc.trip_type === "Return" && airports.length && airports[airports.length - 1] !== airports[0]) {
+        airports.push(airports[0]);
+    }
+
+    frm.set_value("route_summary", airports.join("-"));
+}
 
 function calculate_profitability(frm) {
     const gross_amount = flt(frm.doc.gross_amount);
