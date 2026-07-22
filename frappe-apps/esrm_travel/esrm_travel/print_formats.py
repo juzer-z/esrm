@@ -22,13 +22,13 @@ def get_invoice_html():
 
 
 def get_logo_data_uri():
-    logo_path = Path(frappe.get_app_path("esrm_travel", "public", "images", "esrm-logo-print.png"))
+    logo_path = Path(frappe.get_app_path("esrm_travel", "public", "images", "esrm-logo.svg"))
     if not logo_path.exists():
         frappe.log_error(f"ESRM logo source not found: {logo_path}", "ESRM Invoice Print Format")
         return ""
 
     encoded_logo = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{encoded_logo}"
+    return f"data:image/svg+xml;base64,{encoded_logo}"
 
 
 
@@ -180,20 +180,30 @@ ESRM_TICKET_INVOICE_HTML = """
         margin: 0 auto;
     }
     .esrm-header-table {
-        border-bottom: 2px solid #24516a;
-        margin-bottom: 6px;
-        padding-bottom: 2px;
+        border-collapse: collapse;
+        height: 70px;
+        margin-bottom: 0;
         width: 100%;
     }
     .esrm-logo-cell {
+        padding: 0;
+        position: relative;
         vertical-align: top;
         width: 232px;
     }
     .esrm-logo {
         display: block;
         height: auto;
-        margin-top: -18px;
+        left: 0;
+        position: absolute;
+        top: -28px;
         width: 208px;
+    }
+    .esrm-header-rule {
+        border-top: 2px solid #24516a;
+        height: 0;
+        margin: 0 0 6px;
+        width: 100%;
     }
     .esrm-company-cell {
         text-align: right;
@@ -361,10 +371,9 @@ ESRM_TICKET_INVOICE_HTML = """
         width: 100%;
     }
     .esrm-signature-line {
-        border-top: 1px solid #111827;
         margin-top: 26px;
-        padding-top: 4px;
-        width: 215px;
+        width: 260px;
+        white-space: nowrap;
     }
     .esrm-signature-name {
         font-weight: 700;
@@ -386,6 +395,7 @@ ESRM_TICKET_INVOICE_HTML = """
             </td>
         </tr>
     </table>
+    <div class="esrm-header-rule"></div>
 
     <table class="esrm-title-row">
         <tr>
@@ -498,7 +508,6 @@ ESRM_TICKET_INVOICE_HTML = """
         <tr>
             <td class="esrm-signature">
                 <div class="esrm-signature-line">
-                    <div>Authorized Signatory</div>
                     <div class="esrm-signature-name">{{ settings.invoice_signatory_name or "" }}</div>
                     <div>{{ settings.invoice_signatory_designation or "" }}</div>
                     <div>{{ company_name }}</div>
