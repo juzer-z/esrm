@@ -3,6 +3,7 @@ FROM ${ERPNEXT_IMAGE}
 
 USER root
 COPY --chown=frappe:frappe frappe-apps/esrm_travel /home/frappe/frappe-bench/apps/esrm_travel
+RUN sed -i '/location \/assets {/a\        expires 1y;\n        add_header Cache-Control "public, max-age=31536000, immutable";' /templates/nginx/frappe.conf.template
 
 USER frappe
 WORKDIR /home/frappe/frappe-bench
