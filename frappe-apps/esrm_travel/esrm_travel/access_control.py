@@ -1,4 +1,6 @@
 import frappe
+from werkzeug.exceptions import HTTPException
+from werkzeug.utils import redirect
 
 
 AGENT_USER = "agent@esrm.local"
@@ -26,7 +28,7 @@ def redirect_agent_from_setup_wizard():
         and request
         and request.path.rstrip("/") == "/app/setup-wizard"
     ):
-        frappe.redirect("/app/esrm")
+        raise HTTPException(response=redirect("/app/esrm", code=302))
 
 
 def setup_access_controls():
