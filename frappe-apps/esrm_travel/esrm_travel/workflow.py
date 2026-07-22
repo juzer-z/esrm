@@ -50,6 +50,11 @@ def on_cancel_sales_invoice(doc, method=None):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 
 
+def after_delete_sales_invoice(doc, method=None):
+    for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
+        sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
+
+
 def on_submit_payment_entry(doc, method=None):
     for booking_name in get_related_ticket_bookings_from_payment_entry(doc):
         sync_ticket_booking(booking_name)
@@ -119,4 +124,20 @@ def sync_ticket_booking(booking_name, sales_invoice_name=None, clear_sales_invoi
     elif sales_invoice_name and not booking.sales_invoice:
         booking.sales_invoice = sales_invoice_name
 
-    booking.save(ignore_permissions=True)
+    if not clear_sales_invoice:
+        booking.sync_invoice_details()
+
+    booking.set_status()
+    frappe.db.set_value(
+        "Ticket Booking",
+        booking.name,
+        {
+            "sales_invoice": booking.sales_invoice,
+            "invoice_status": booking.invoice_status,
+            "invoice_amount": booking.invoice_amount,
+            "paid_amount": booking.paid_amount,
+            "outstanding_amount": booking.outstanding_amount,
+            "status": booking.status,
+        },
+        update_modified=True,
+    )

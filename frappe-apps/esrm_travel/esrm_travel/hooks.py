@@ -43,6 +43,7 @@ doc_events = {
         "on_submit": "esrm_travel.workflow.on_submit_sales_invoice",
         "on_update_after_submit": "esrm_travel.workflow.on_update_after_submit_sales_invoice",
         "on_cancel": "esrm_travel.workflow.on_cancel_sales_invoice",
+        "after_delete": "esrm_travel.workflow.after_delete_sales_invoice",
     },
     "Payment Entry": {
         "before_validate": "esrm_travel.workflow.before_validate_payment_entry",
