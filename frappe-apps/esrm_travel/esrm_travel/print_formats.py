@@ -302,6 +302,9 @@ ESRM_TICKET_INVOICE_HTML = """
         vertical-align: top;
         overflow-wrap: break-word;
     }
+    .esrm-ticket-table td {
+        font-size: 8pt;
+    }
     .esrm-ticket-table th {
         background: #eaf1f5;
         color: #243b53;
@@ -311,6 +314,14 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-ticket-table .center {
         text-align: center;
+    }
+    .esrm-ticket-table .ticket-number {
+        font-size: 7.5pt;
+        white-space: nowrap;
+    }
+    .esrm-ticket-table .route {
+        font-size: 7.5pt;
+        white-space: nowrap;
     }
     .esrm-ticket-table .amount {
         padding-left: 3px;
@@ -461,8 +472,8 @@ ESRM_TICKET_INVOICE_HTML = """
                 <td class="center">{{ loop.index }}</td>
                 <td>{{ frappe.utils.formatdate(ticket.issue_date, "dd MMM yyyy") if ticket.issue_date else "" }}</td>
                 <td>{{ ticket.passenger_name or "" }}</td>
-                <td>{{ ticket.ticket_number or "" }}</td>
-                <td>{{ ticket.route or "" }}</td>
+                <td class="ticket-number">{{ ticket.ticket_number or "" }}</td>
+                <td class="route">{{ ticket.route or "" }}</td>
                 <td>{{ ticket.carrier or "" }}</td>
                 <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(ticket.fare or 0) }}</td>
                 <td>{{ ticket.remarks or "" }}</td>
