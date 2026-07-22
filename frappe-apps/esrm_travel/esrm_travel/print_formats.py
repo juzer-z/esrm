@@ -181,23 +181,18 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-header-table {
         border-collapse: collapse;
-        height: 70px;
         margin-bottom: 0;
         width: 100%;
     }
     .esrm-logo-cell {
-        padding: 0;
-        position: relative;
+        padding: 0 0 6pt;
         vertical-align: top;
         width: 232px;
     }
     .esrm-logo {
         display: block;
         height: auto;
-        left: 0;
-        position: absolute;
-        top: -28px;
-        width: 208px;
+        width: 146px;
     }
     .esrm-header-rule {
         border-top: 2px solid #24516a;
