@@ -386,7 +386,7 @@ ESRM_TICKET_INVOICE_HTML = """
             <td class="esrm-company-cell">
                 <div class="esrm-company-name">{{ company_name }}</div>
                 {% if company_address %}
-                    <div class="esrm-company-address">{{ company_address }}</div>
+                    <div class="esrm-company-address">{{ company_address | replace(" Email:", "\nEmail:") }}</div>
                 {% endif %}
             </td>
         </tr>
@@ -451,7 +451,7 @@ ESRM_TICKET_INVOICE_HTML = """
                 <th style="width: 15%;">Ticket No.</th>
                 <th style="width: 12%;">Route</th>
                 <th style="width: 9%;">Airline</th>
-                <th style="width: 19%;" class="amount">Amount</th>
+                <th style="width: 19%;" class="center">Amount</th>
                 <th style="width: 11%;">Remarks</th>
             </tr>
         </thead>
