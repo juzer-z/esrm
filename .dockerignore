@@ -1,0 +1,7 @@
+*
+!.dockerignore
+!production/
+!production/**
+!frappe-apps/
+!frappe-apps/esrm_travel/
+!frappe-apps/esrm_travel/**
