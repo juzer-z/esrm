@@ -16,5 +16,11 @@
     "doctype": "Role",
     "name": "ESRM Agent",
     "role_name": "ESRM Agent"
+  },
+  {
+    "desk_access": 1,
+    "doctype": "Role",
+    "name": "ESRM Approver",
+    "role_name": "ESRM Approver"
   }
 ]

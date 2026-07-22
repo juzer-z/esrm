@@ -18,7 +18,7 @@
         "update_value": "Draft"
       },
       {
-        "allow_edit": "System Manager",
+        "allow_edit": "ESRM Approver",
         "doc_status": "0",
         "doctype": "Workflow Document State",
         "is_optional_state": 0,
@@ -27,7 +27,7 @@
         "update_value": "Pending Approval"
       },
       {
-        "allow_edit": "ESRM Agent",
+        "allow_edit": "ESRM Approver",
         "doc_status": "1",
         "doctype": "Workflow Document State",
         "is_optional_state": 0,
@@ -36,7 +36,7 @@
         "update_value": "Approved"
       },
       {
-        "allow_edit": "System Manager",
+        "allow_edit": "ESRM Agent",
         "doc_status": "0",
         "doctype": "Workflow Document State",
         "is_optional_state": 1,
@@ -57,7 +57,7 @@
       {
         "action": "Approve",
         "allow_self_approval": 0,
-        "allowed": "System Manager",
+        "allowed": "ESRM Approver",
         "doctype": "Workflow Transition",
         "next_state": "Approved",
         "state": "Pending Approval"
@@ -65,7 +65,7 @@
       {
         "action": "Reject",
         "allow_self_approval": 0,
-        "allowed": "System Manager",
+        "allowed": "ESRM Approver",
         "doctype": "Workflow Transition",
         "next_state": "Rejected",
         "state": "Pending Approval"
