@@ -473,7 +473,7 @@ ESRM_TICKET_INVOICE_HTML = """
             {% for ticket in tickets %}
             <tr>
                 <td class="center">{{ loop.index }}</td>
-                <td>{{ frappe.utils.formatdate(ticket.issue_date, "dd MMM yyyy") if ticket.issue_date else "" }}</td>
+                <td>{{ frappe.utils.formatdate(ticket.issue_date, "dd/MM/yyyy") if ticket.issue_date else "" }}</td>
                 <td>{{ ticket.passenger_name or "" }}</td>
                 <td class="ticket-number">{{ ticket.ticket_number or "" }}</td>
                 <td class="route">{{ ticket.route or "" }}</td>
