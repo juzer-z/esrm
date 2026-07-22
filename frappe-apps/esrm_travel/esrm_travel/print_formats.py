@@ -153,6 +153,7 @@ ESRM_TICKET_INVOICE_HTML = """
 {% set company_name = "Ezzy Services & Resource Management" %}
 {% set company_address = settings.invoice_letterhead_address if settings.invoice_letterhead_address and settings.invoice_letterhead_address != company_name else "" %}
 {% set invoice_total = doc.rounded_total or doc.grand_total or 0 %}
+{% set customer_address = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else none %}
 {% if not tickets and doc.esrm_ticket_booking %}
     {% set booking = frappe.get_doc("Ticket Booking", doc.esrm_ticket_booking) %}
     {% set tickets = [{
@@ -434,7 +435,13 @@ ESRM_TICKET_INVOICE_HTML = """
             <td class="esrm-bill-to">
                 <div class="esrm-section-title">Bill To</div>
                 <div class="esrm-customer-name">{{ doc.customer_name or doc.customer }}</div>
-                <div>{{ (doc.address_display or "") | safe }}</div>
+                {% if customer_address %}
+                    {% if customer_address.address_line1 %}<div>{{ customer_address.address_line1 }}</div>{% endif %}
+                    {% if customer_address.address_line2 %}<div>{{ customer_address.address_line2 }}</div>{% endif %}
+                    <div>{{ customer_address.city or "" }}{% if customer_address.pincode %} {{ customer_address.pincode }}{% endif %}{% if customer_address.country %}{% if customer_address.city or customer_address.pincode %}, {% endif %}{{ customer_address.country }}{% endif %}</div>
+                {% else %}
+                    <div>{{ (doc.address_display or "") | safe }}</div>
+                {% endif %}
             </td>
             <td class="esrm-summary">
                 <div class="esrm-summary-block">
