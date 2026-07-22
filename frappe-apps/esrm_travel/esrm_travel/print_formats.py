@@ -22,13 +22,13 @@ def get_invoice_html():
 
 
 def get_logo_data_uri():
-    logo_path = Path(frappe.get_app_path("esrm_travel", "public", "images", "esrm-logo.svg"))
+    logo_path = Path(frappe.get_app_path("esrm_travel", "public", "images", "esrm-logo-print.png"))
     if not logo_path.exists():
         frappe.log_error(f"ESRM logo source not found: {logo_path}", "ESRM Invoice Print Format")
         return ""
 
     encoded_logo = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-    return f"data:image/svg+xml;base64,{encoded_logo}"
+    return f"data:image/png;base64,{encoded_logo}"
 
 
 
@@ -192,6 +192,7 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-logo {
         display: block;
         height: auto;
+        margin: -10pt 0 10pt;
         width: 146px;
     }
     .esrm-header-rule {
