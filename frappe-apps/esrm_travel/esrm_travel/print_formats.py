@@ -281,7 +281,7 @@ ESRM_TICKET_INVOICE_HTML = """
         vertical-align: top;
     }
     .esrm-summary-label {
-        font-weight: 700;
+        font-weight: 400;
         padding-right: 4px;
         white-space: nowrap;
         width: 66px;
@@ -338,7 +338,10 @@ ESRM_TICKET_INVOICE_HTML = """
         margin: 7px 0 10px;
         padding: 6px 8px;
     }
-    .esrm-amount-words span {
+    .esrm-amount-words-label {
+        font-weight: 400;
+    }
+    .esrm-amount-words-value {
         font-weight: 700;
     }
     .esrm-payment-box {
@@ -487,7 +490,7 @@ ESRM_TICKET_INVOICE_HTML = """
         </tbody>
     </table>
 
-    <div class="esrm-amount-words"><span>Amount in words:</span> {{ frappe.utils.money_in_words(invoice_total, doc.currency) }}</div>
+    <div class="esrm-amount-words"><span class="esrm-amount-words-label">Amount in words:</span> <span class="esrm-amount-words-value">{{ frappe.utils.money_in_words(invoice_total, doc.currency) }}</span></div>
 
     <div class="esrm-payment-box">
         <div class="esrm-section-title">Payment Details</div>
