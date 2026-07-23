@@ -407,18 +407,15 @@ ESRM_TICKET_INVOICE_HTML = """
         width: 42%;
     }
     .esrm-iata-logo {
-        height: 58px;
+        height: 86px;
         margin-right: 8px;
-        object-fit: contain;
         vertical-align: bottom;
-        width: 78px;
+        width: 115px;
     }
     .esrm-atab-logo {
         height: auto;
-        max-height: 41px;
-        object-fit: contain;
         vertical-align: bottom;
-        width: 142px;
+        width: 100px;
     }
 </style>
 
