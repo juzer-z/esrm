@@ -181,7 +181,7 @@ ESRM_TICKET_INVOICE_HTML = """
         font-family: Arial, sans-serif;
         font-size: 9pt;
         line-height: 1.25;
-        min-height: 250mm;
+        min-height: 267mm;
         position: relative;
     }
     .print-format .esrm-invoice {
@@ -322,7 +322,14 @@ ESRM_TICKET_INVOICE_HTML = """
         text-align: center;
     }
     .esrm-ticket-table .center {
-        text-align: center;
+        text-align: center !important;
+        vertical-align: middle;
+    }
+    .esrm-ticket-table tbody td:nth-child(2),
+    .esrm-ticket-table tbody td:nth-child(5),
+    .esrm-ticket-table tbody td:nth-child(6) {
+        text-align: center !important;
+        vertical-align: middle;
     }
     .esrm-ticket-table .ticket-number {
         font-size: 7.5pt;
