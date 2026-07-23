@@ -10,6 +10,8 @@ app_icon = "fa fa-plane"
 app_color = "#0b7285"
 source_link = ""
 
+app_include_js = ["/assets/esrm_travel/js/approval_notification_refresh.js"]
+
 before_request = "esrm_travel.access_control.redirect_agent_from_setup_wizard"
 
 after_migrate = "esrm_travel.dashboard.setup_workspace"
