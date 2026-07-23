@@ -226,6 +226,7 @@ def setup_number_cards():
 
 def upsert_number_card(card):
     doc = get_or_create("Number Card", card["name"])
+    currency = frappe.db.get_single_value("Global Defaults", "default_currency") or "BDT"
     doc.update(
         {
             "label": card["label"],
@@ -234,6 +235,7 @@ def upsert_number_card(card):
             "document_type": card["document_type"],
             "function": card["function"],
             "aggregate_function_based_on": card["aggregate_function_based_on"],
+            "currency": currency if card["function"] == "Sum" else None,
             "is_public": 1,
             "show_full_number": 1,
             "show_percentage_stats": 0,
