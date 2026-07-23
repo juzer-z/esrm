@@ -68,6 +68,9 @@ def ensure_accounting_defaults():
     frappe.db.set_single_value("Global Defaults", "default_company", company)
     frappe.db.set_single_value("Global Defaults", "default_currency", company_currency or "BDT")
     frappe.db.set_single_value("Global Defaults", "country", company_country or "Bangladesh")
+    frappe.db.set_single_value("System Settings", "time_zone", "Asia/Dhaka")
+    frappe.defaults.set_global_default("currency", company_currency or "BDT")
+    frappe.defaults.set_global_default("time_zone", "Asia/Dhaka")
 
     root_cost_center = f"{company} - ESRM"
     default_cost_center = "Main - ESRM"

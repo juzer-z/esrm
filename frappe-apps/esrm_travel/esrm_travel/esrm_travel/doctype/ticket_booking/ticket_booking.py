@@ -231,6 +231,10 @@ def make_sales_invoice_from_bookings(booking_names):
             "doctype": "Sales Invoice",
             "customer": bookings[0].customer,
             "company": settings.default_company,
+            "currency": frappe.db.get_value(
+                "Company", settings.default_company, "default_currency"
+            ) or "BDT",
+            "conversion_rate": 1,
             "posting_date": nowdate(),
             "due_date": get_invoice_due_date(bookings),
             "esrm_invoice_number": bookings[0].invoice_number,
