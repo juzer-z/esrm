@@ -305,7 +305,9 @@ def get_booking_income_account(booking, settings):
 
 def get_invoice_due_date(bookings):
     dates = [booking.flight_date or booking.issue_date for booking in bookings if booking.flight_date or booking.issue_date]
-    return min(dates) if dates else nowdate()
+    posting_date = getdate(nowdate())
+    booking_due_date = min(getdate(date) for date in dates) if dates else posting_date
+    return max(booking_due_date, posting_date)
 
 
 def build_invoice_ticket_row(booking, rate):
