@@ -62,6 +62,13 @@ def ensure_accounting_defaults():
     if not company:
         return
 
+    company_currency, company_country = frappe.db.get_value(
+        "Company", company, ["default_currency", "country"]
+    )
+    frappe.db.set_single_value("Global Defaults", "default_company", company)
+    frappe.db.set_single_value("Global Defaults", "default_currency", company_currency or "BDT")
+    frappe.db.set_single_value("Global Defaults", "country", company_country or "Bangladesh")
+
     root_cost_center = f"{company} - ESRM"
     default_cost_center = "Main - ESRM"
     default_income_account = "Air Ticket Sales-International - ESRM"

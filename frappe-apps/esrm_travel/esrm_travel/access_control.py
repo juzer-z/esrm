@@ -12,7 +12,9 @@ ALLOWED_AGENT_MODULES = {
 }
 
 AGENT_PERMISSIONS = {
-    "Ticket Booking": dict(read=1, write=1, create=1, email=1, print=1, report=1, select=1),
+    "Ticket Booking": dict(
+        read=1, write=1, create=1, submit=1, email=1, print=1, report=1, select=1
+    ),
     "Ticket Sector": dict(read=1, write=1, create=1, select=1),
     "Customer": dict(read=1, write=1, create=1, print=1, report=1, select=1),
     "Sales Invoice": dict(read=1, write=1, create=1, email=1, print=1, report=1, select=1),
