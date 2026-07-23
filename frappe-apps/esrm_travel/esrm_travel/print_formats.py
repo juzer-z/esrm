@@ -21,7 +21,7 @@ def get_invoice_html():
     return (
         ESRM_TICKET_INVOICE_HTML
         .replace("__ESRM_LOGO_DATA_URI__", get_image_data_uri("esrm-logo-print.png", "image/png"))
-        .replace("__IATA_LOGO_DATA_URI__", get_image_data_uri("iata-accredited-agent.svg", "image/svg+xml"))
+        .replace("__IATA_LOGO_DATA_URI__", get_image_data_uri("iata-accredited-agent-cropped.png", "image/png"))
         .replace("__ATAB_LOGO_DATA_URI__", get_image_data_uri("atab-logo.png", "image/png"))
     )
 
@@ -181,6 +181,8 @@ ESRM_TICKET_INVOICE_HTML = """
         font-family: Arial, sans-serif;
         font-size: 9pt;
         line-height: 1.25;
+        min-height: 250mm;
+        position: relative;
     }
     .print-format .esrm-invoice {
         max-width: 185mm;
@@ -388,7 +390,7 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-signature {
         text-align: left;
         vertical-align: bottom;
-        width: 58%;
+        width: 100%;
     }
     .esrm-signature-line {
         margin-top: 26px;
@@ -400,17 +402,18 @@ ESRM_TICKET_INVOICE_HTML = """
         text-transform: uppercase;
     }
     .esrm-accreditation-logos {
-        padding-bottom: 1px;
+        bottom: 0;
+        position: absolute;
+        right: 0;
         text-align: right;
-        vertical-align: bottom;
         white-space: nowrap;
-        width: 42%;
+        z-index: 5;
     }
     .esrm-iata-logo {
-        height: 86px;
+        height: auto;
         margin-right: 8px;
         vertical-align: bottom;
-        width: 115px;
+        width: 122px;
     }
     .esrm-atab-logo {
         height: auto;
@@ -551,7 +554,7 @@ ESRM_TICKET_INVOICE_HTML = """
 
     <table class="esrm-footer-table">
         <tr>
-            <td class="esrm-note" colspan="2">Thank you. We assure you of our best cooperation at all times.</td>
+            <td class="esrm-note">Thank you. We assure you of our best cooperation at all times.</td>
         </tr>
         <tr>
             <td class="esrm-signature">
@@ -561,11 +564,11 @@ ESRM_TICKET_INVOICE_HTML = """
                     <div>{{ company_name }}</div>
                 </div>
             </td>
-            <td class="esrm-accreditation-logos">
-                <img class="esrm-iata-logo" src="__IATA_LOGO_DATA_URI__">
-                <img class="esrm-atab-logo" src="__ATAB_LOGO_DATA_URI__">
-            </td>
         </tr>
     </table>
+    <div class="esrm-accreditation-logos">
+        <img class="esrm-iata-logo" src="__IATA_LOGO_DATA_URI__">
+        <img class="esrm-atab-logo" src="__ATAB_LOGO_DATA_URI__">
+    </div>
 </div>
 """
