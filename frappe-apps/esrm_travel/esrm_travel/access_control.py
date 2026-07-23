@@ -78,6 +78,12 @@ def setup_workflow():
     for transition in workflow.transitions:
         if transition.action in {"Approve", "Reject"}:
             transition.allowed = APPROVER_ROLE
+            transition.allow_self_approval = 0
+        elif transition.action == "Send for Approval":
+            transition.allowed = AGENT_ROLE
+            # The booking owner must be able to send their own draft onward.
+            # Final approval and rejection remain restricted to approvers above.
+            transition.allow_self_approval = 1
     workflow.save(ignore_permissions=True)
 
 
