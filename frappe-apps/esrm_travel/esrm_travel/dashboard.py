@@ -72,6 +72,7 @@ def ensure_accounting_defaults():
     root_cost_center = f"{company} - ESRM"
     default_cost_center = "Main - ESRM"
     default_income_account = "Air Ticket Sales-International - ESRM"
+    domestic_income_account = "Air Ticket Sales-Domestic - ESRM"
 
     if not frappe.db.exists("Company", company):
         return
@@ -101,6 +102,8 @@ def ensure_accounting_defaults():
 
     if not settings.default_company:
         settings.default_company = company
+    if not settings.default_service_item and frappe.db.exists("Item", "TB"):
+        settings.default_service_item = "TB"
 
     income_account_root_type = None
     income_account_is_group = 0
@@ -121,10 +124,18 @@ def ensure_accounting_defaults():
     ):
         settings.default_income_account = default_income_account
 
+    if frappe.db.exists("Account", domestic_income_account):
+        settings.domestic_income_account = domestic_income_account
+    if frappe.db.exists("Account", default_income_account):
+        settings.international_income_account = default_income_account
+
     if (
         settings.has_value_changed("default_company")
+        or settings.has_value_changed("default_service_item")
         or settings.has_value_changed("default_cost_center")
         or settings.has_value_changed("default_income_account")
+        or settings.has_value_changed("domestic_income_account")
+        or settings.has_value_changed("international_income_account")
     ):
         settings.flags.ignore_mandatory = True
         settings.save(ignore_permissions=True)

@@ -10,6 +10,8 @@
   "column_break_1",
   "default_cost_center",
   "default_income_account",
+  "domestic_income_account",
+  "international_income_account",
   "naming_section",
   "ticket_booking_series",
   "invoice_print_section",
@@ -57,6 +59,20 @@
    "fieldtype": "Link",
    "label": "Default Income Account",
    "options": "Account"
+  },
+  {
+   "fieldname": "domestic_income_account",
+   "fieldtype": "Link",
+   "label": "Domestic Ticket Income Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "international_income_account",
+   "fieldtype": "Link",
+   "label": "International Ticket Income Account",
+   "options": "Account",
+   "reqd": 1
   },
   {
    "fieldname": "naming_section",

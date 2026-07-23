@@ -221,8 +221,7 @@ def make_sales_invoice_from_bookings(booking_names):
 
         if settings.default_cost_center:
             item_row["cost_center"] = settings.default_cost_center
-        if settings.default_income_account:
-            item_row["income_account"] = settings.default_income_account
+        item_row["income_account"] = get_booking_income_account(booking, settings)
 
         invoice_items.append(item_row)
         invoice_tickets.append(build_invoice_ticket_row(booking, rate))
@@ -276,6 +275,28 @@ def validate_invoice_settings(settings):
         frappe.throw(_("Set Default Company in ESRM Settings first."))
     if not settings.default_service_item:
         frappe.throw(_("Set Default Service Item in ESRM Settings first."))
+
+
+def get_booking_income_account(booking, settings):
+    if booking.travel_type == "Domestic":
+        income_account = settings.domestic_income_account
+    elif booking.travel_type == "International":
+        income_account = settings.international_income_account
+    else:
+        frappe.throw(
+            _("Select Domestic or International in Travel Type for Ticket Booking {0}.").format(
+                booking.name
+            )
+        )
+
+    if not income_account:
+        frappe.throw(
+            _("Set the {0} Ticket Income Account in ESRM Settings first.").format(
+                booking.travel_type
+            )
+        )
+
+    return income_account
 
 
 def get_invoice_due_date(bookings):

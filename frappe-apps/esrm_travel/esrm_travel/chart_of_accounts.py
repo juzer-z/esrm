@@ -93,6 +93,7 @@ ACCOUNT_LEDGERS = [
     ("Long Term Loan", "Bank Loan", ""),
     ("Bank Ltd.", "Bank Loan", ""),
     ("Air Ticket Sales-International", "Operating Income", ""),
+    ("Air Ticket Sales-Domestic", "Operating Income", ""),
     ("Visa and Other Service-Sales", "Operating Income", ""),
     ("Manpower Fee", "Operating Income", ""),
     ("Incentive Income", "Operating Income", ""),
