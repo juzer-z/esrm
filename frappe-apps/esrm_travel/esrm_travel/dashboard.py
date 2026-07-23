@@ -71,6 +71,24 @@ def ensure_accounting_defaults():
     frappe.db.set_single_value("System Settings", "time_zone", "Asia/Dhaka")
     frappe.defaults.set_global_default("currency", company_currency or "BDT")
     frappe.defaults.set_global_default("time_zone", "Asia/Dhaka")
+    selling_price_list = "Standard Selling"
+    if frappe.db.exists("Price List", selling_price_list):
+        price_list = frappe.get_doc("Price List", selling_price_list)
+    else:
+        price_list = frappe.get_doc(
+            {
+                "doctype": "Price List",
+                "price_list_name": selling_price_list,
+                "currency": company_currency or "BDT",
+                "selling": 1,
+                "enabled": 1,
+            }
+        )
+    price_list.currency = company_currency or "BDT"
+    price_list.selling = 1
+    price_list.enabled = 1
+    save_doc(price_list)
+    frappe.db.set_single_value("Selling Settings", "selling_price_list", selling_price_list)
 
     root_cost_center = f"{company} - ESRM"
     default_cost_center = "Main - ESRM"

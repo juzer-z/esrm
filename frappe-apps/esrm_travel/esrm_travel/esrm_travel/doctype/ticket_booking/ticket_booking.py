@@ -204,6 +204,13 @@ def make_sales_invoice_from_bookings(booking_names):
 
     settings = frappe.get_single("ESRM Travel Settings")
     validate_invoice_settings(settings)
+    company_currency = frappe.db.get_value(
+        "Company", settings.default_company, "default_currency"
+    ) or "BDT"
+    selling_price_list = (
+        frappe.db.get_single_value("Selling Settings", "selling_price_list")
+        or "Standard Selling"
+    )
 
     invoice_items = []
     invoice_tickets = []
@@ -231,10 +238,11 @@ def make_sales_invoice_from_bookings(booking_names):
             "doctype": "Sales Invoice",
             "customer": bookings[0].customer,
             "company": settings.default_company,
-            "currency": frappe.db.get_value(
-                "Company", settings.default_company, "default_currency"
-            ) or "BDT",
+            "currency": company_currency,
             "conversion_rate": 1,
+            "selling_price_list": selling_price_list,
+            "price_list_currency": company_currency,
+            "plc_conversion_rate": 1,
             "posting_date": nowdate(),
             "due_date": get_invoice_due_date(bookings),
             "esrm_invoice_number": bookings[0].invoice_number,
