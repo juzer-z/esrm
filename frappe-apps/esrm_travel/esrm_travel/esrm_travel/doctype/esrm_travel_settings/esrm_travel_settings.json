@@ -21,6 +21,7 @@
   "column_break_2",
   "invoice_bank_name",
   "invoice_bank_branch",
+  "invoice_bank_routing_number",
   "invoice_signatory_name",
   "invoice_signatory_designation"
  ],
@@ -123,6 +124,12 @@
    "fieldname": "invoice_bank_branch",
    "fieldtype": "Data",
    "label": "Bank Branch"
+  },
+  {
+   "default": "235260444",
+   "fieldname": "invoice_bank_routing_number",
+   "fieldtype": "Data",
+   "label": "Bank Routing Number"
   },
   {
    "default": "U OAI MONG MARMA JOY",

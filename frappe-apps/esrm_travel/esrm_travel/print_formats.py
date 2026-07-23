@@ -18,17 +18,22 @@ LEGACY_PAYMENT_INSTRUCTIONS = (
 
 
 def get_invoice_html():
-    return ESRM_TICKET_INVOICE_HTML.replace("__ESRM_LOGO_DATA_URI__", get_logo_data_uri())
+    return (
+        ESRM_TICKET_INVOICE_HTML
+        .replace("__ESRM_LOGO_DATA_URI__", get_image_data_uri("esrm-logo-print.png", "image/png"))
+        .replace("__IATA_LOGO_DATA_URI__", get_image_data_uri("iata-accredited-agent.svg", "image/svg+xml"))
+        .replace("__ATAB_LOGO_DATA_URI__", get_image_data_uri("atab-logo.png", "image/png"))
+    )
 
 
-def get_logo_data_uri():
-    logo_path = Path(frappe.get_app_path("esrm_travel", "public", "images", "esrm-logo-print.png"))
-    if not logo_path.exists():
-        frappe.log_error(f"ESRM logo source not found: {logo_path}", "ESRM Invoice Print Format")
+def get_image_data_uri(filename, mime_type):
+    image_path = Path(frappe.get_app_path("esrm_travel", "public", "images", filename))
+    if not image_path.exists():
+        frappe.log_error(f"ESRM invoice image not found: {image_path}", "ESRM Invoice Print Format")
         return ""
 
-    encoded_logo = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{encoded_logo}"
+    encoded_image = base64.b64encode(image_path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded_image}"
 
 
 
@@ -97,6 +102,7 @@ def ensure_invoice_print_defaults():
         "invoice_bank_account_number": "505-111-00000-199",
         "invoice_bank_name": "PREMIER BANK LTD.",
         "invoice_bank_branch": "BANANI SME BRANCH, DHAKA",
+        "invoice_bank_routing_number": "235260444",
         "invoice_signatory_name": "U OAI MONG MARMA JOY",
         "invoice_signatory_designation": "ASSISTANT MANAGER",
     }
@@ -347,18 +353,20 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-payment-box {
         border: 1px solid #d2d6dc;
+        font-size: 8.3pt;
+        line-height: 1.12;
         margin-top: 8px;
-        padding: 7px 10px;
+        padding: 6px 10px;
     }
     .esrm-payment-note {
-        margin-bottom: 5px;
+        margin-bottom: 3px;
     }
     .esrm-payment-table {
         border-collapse: collapse;
         width: 100%;
     }
     .esrm-payment-table td {
-        padding: 2px 0;
+        padding: 1px 0;
         vertical-align: top;
     }
     .esrm-payment-label {
@@ -379,7 +387,8 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-signature {
         text-align: left;
-        width: 100%;
+        vertical-align: bottom;
+        width: 58%;
     }
     .esrm-signature-line {
         margin-top: 26px;
@@ -389,6 +398,27 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-signature-name {
         font-weight: 700;
         text-transform: uppercase;
+    }
+    .esrm-accreditation-logos {
+        padding-bottom: 1px;
+        text-align: right;
+        vertical-align: bottom;
+        white-space: nowrap;
+        width: 42%;
+    }
+    .esrm-iata-logo {
+        height: 58px;
+        margin-right: 8px;
+        object-fit: contain;
+        vertical-align: bottom;
+        width: 78px;
+    }
+    .esrm-atab-logo {
+        height: auto;
+        max-height: 41px;
+        object-fit: contain;
+        vertical-align: bottom;
+        width: 142px;
     }
 </style>
 
@@ -480,11 +510,11 @@ ESRM_TICKET_INVOICE_HTML = """
             {% for ticket in tickets %}
             <tr>
                 <td class="center">{{ loop.index }}</td>
-                <td>{{ frappe.utils.formatdate(ticket.issue_date, "dd/MM/yyyy") if ticket.issue_date else "" }}</td>
+                <td class="center">{{ frappe.utils.formatdate(ticket.issue_date, "dd/MM/yyyy") if ticket.issue_date else "" }}</td>
                 <td>{{ ticket.passenger_name or "" }}</td>
                 <td class="ticket-number">{{ ticket.ticket_number or "" }}</td>
-                <td class="route">{{ ticket.route or "" }}</td>
-                <td>{{ ticket.carrier or "" }}</td>
+                <td class="route center">{{ ticket.route or "" }}</td>
+                <td class="center">{{ ticket.carrier or "" }}</td>
                 <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(ticket.fare or 0) }}</td>
                 <td>{{ ticket.remarks or "" }}</td>
             </tr>
@@ -515,12 +545,16 @@ ESRM_TICKET_INVOICE_HTML = """
                 <td class="esrm-payment-label">Branch</td>
                 <td>{{ settings.invoice_bank_branch or "" }}</td>
             </tr>
+            <tr>
+                <td class="esrm-payment-label">Routing Number</td>
+                <td>{{ settings.invoice_bank_routing_number or "235260444" }}</td>
+            </tr>
         </table>
     </div>
 
     <table class="esrm-footer-table">
         <tr>
-            <td class="esrm-note">Thank you. We assure you of our best cooperation at all times.</td>
+            <td class="esrm-note" colspan="2">Thank you. We assure you of our best cooperation at all times.</td>
         </tr>
         <tr>
             <td class="esrm-signature">
@@ -529,6 +563,10 @@ ESRM_TICKET_INVOICE_HTML = """
                     <div>{{ settings.invoice_signatory_designation or "" }}</div>
                     <div>{{ company_name }}</div>
                 </div>
+            </td>
+            <td class="esrm-accreditation-logos">
+                <img class="esrm-iata-logo" src="__IATA_LOGO_DATA_URI__">
+                <img class="esrm-atab-logo" src="__ATAB_LOGO_DATA_URI__">
             </td>
         </tr>
     </table>
