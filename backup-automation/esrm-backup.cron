@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CRON_TZ=Asia/Dhaka
+
+0 2 * * * root /home/frappe/esrm-production/backup/run-server-backup.sh >> /var/log/esrm-backup.log 2>&1
