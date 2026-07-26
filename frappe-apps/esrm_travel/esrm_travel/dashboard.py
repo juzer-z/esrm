@@ -14,6 +14,7 @@ def setup_workspace():
     setup_print_formats()
     ensure_fiscal_years()
     ensure_accounting_defaults()
+    ensure_address_template()
     recalculate_ticket_profitability()
     setup_number_cards()
     setup_charts()
@@ -56,6 +57,34 @@ def get_required_fiscal_years():
         ("2026-2027", "2026-07-01", "2027-06-30"),
         ("2027-2028", "2027-07-01", "2028-06-30"),
     ]
+
+
+def ensure_address_template():
+    country = "Bangladesh"
+    if not frappe.db.exists("Country", country):
+        return
+
+    if frappe.db.exists("Address Template", country):
+        address_template = frappe.get_doc("Address Template", country)
+    else:
+        address_template = frappe.get_doc(
+            {
+                "doctype": "Address Template",
+                "country": country,
+            }
+        )
+
+    address_template.is_default = 1
+    address_template.template = """{{ address_line1 }}<br>
+{% if address_line2 %}{{ address_line2 }}<br>{% endif -%}
+{% if city %}{{ city }}{% endif -%}
+{% if pincode %} {{ pincode }}{% endif -%}
+{% if state %}, {{ state }}{% endif -%}
+{% if city or pincode or state %}, {% endif -%}{{ country }}<br>
+{% if phone %}Phone: {{ phone }}<br>{% endif -%}
+{% if email_id %}Email: {{ email_id }}<br>{% endif -%}"""
+    save_doc(address_template)
+
 
 def ensure_accounting_defaults():
     company = get_company()
