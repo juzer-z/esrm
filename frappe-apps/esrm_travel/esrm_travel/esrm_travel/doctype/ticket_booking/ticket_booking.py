@@ -28,6 +28,7 @@ class TicketBooking(Document):
 
     def validate(self):
         self.validate_amounts()
+        self.set_cost_completion()
         self.calculate_profitability()
         self.validate_invoice_number()
         self.set_route_summary()
@@ -36,6 +37,7 @@ class TicketBooking(Document):
 
     def before_update_after_submit(self):
         self.validate_amounts()
+        self.set_cost_completion()
         self.calculate_profitability()
 
     def validate_amounts(self):
@@ -69,6 +71,12 @@ class TicketBooking(Document):
             self.profit = invoice_amount - supplier_cost
 
         self.discount = gross_amount - invoice_amount
+
+    def set_cost_completion(self):
+        if self.payment_mode == "IATA":
+            self.cost_incomplete = int(flt(self.iata_amount) <= 0)
+        else:
+            self.cost_incomplete = int(flt(self.supplier_cost) <= 0)
 
     def validate_invoice_number(self):
         if not self.invoice_number:

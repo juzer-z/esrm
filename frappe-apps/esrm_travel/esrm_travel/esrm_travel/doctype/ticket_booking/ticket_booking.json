@@ -42,6 +42,7 @@
   "gross_amount",
   "iata_amount",
   "supplier_cost",
+  "cost_incomplete",
   "invoice_amount",
   "commission",
   "discount",
@@ -284,6 +285,15 @@
    "fieldname": "supplier_cost",
    "fieldtype": "Currency",
    "label": "Supplier Cost"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "fieldname": "cost_incomplete",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Cost Incomplete",
+   "read_only": 1
   },
   {
    "fieldname": "invoice_amount",
