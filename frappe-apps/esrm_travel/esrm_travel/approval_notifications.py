@@ -81,6 +81,7 @@ def _get_recipients(doc, state):
             for user in users
             if user
             and user != "Guest"
+            and user != frappe.session.user
             and frappe.db.get_value("User", user, "enabled")
         }
     )
