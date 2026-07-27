@@ -88,13 +88,14 @@ def setup_workflow():
 
 
 def configure_administrator():
-    if not frappe.db.exists("Has Role", {"parent": "Administrator", "role": APPROVER_ROLE}):
-        frappe.get_doc(
-            {
-                "doctype": "Has Role", "parent": "Administrator", "parenttype": "User",
-                "parentfield": "roles", "role": APPROVER_ROLE,
-            }
-        ).insert(ignore_permissions=True)
+    for role in (AGENT_ROLE, APPROVER_ROLE):
+        if not frappe.db.exists("Has Role", {"parent": "Administrator", "role": role}):
+            frappe.get_doc(
+                {
+                    "doctype": "Has Role", "parent": "Administrator", "parenttype": "User",
+                    "parentfield": "roles", "role": role,
+                }
+            ).insert(ignore_permissions=True)
 
 
 def configure_agent_user():
