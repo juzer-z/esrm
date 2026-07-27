@@ -42,7 +42,7 @@
   "gross_amount",
   "iata_amount",
   "supplier_cost",
-  "cost_incomplete",
+  "cost_status",
   "invoice_amount",
   "commission",
   "discount",
@@ -288,11 +288,12 @@
   },
   {
    "allow_on_submit": 1,
-   "default": "1",
-   "fieldname": "cost_incomplete",
-   "fieldtype": "Check",
+   "default": "Incomplete",
+   "fieldname": "cost_status",
+   "fieldtype": "Select",
    "in_standard_filter": 1,
-   "label": "Cost Incomplete",
+   "label": "Cost Status",
+   "options": "\nComplete\nIncomplete",
    "read_only": 1
   },
   {

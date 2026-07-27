@@ -74,9 +74,13 @@ class TicketBooking(Document):
 
     def set_cost_completion(self):
         if self.payment_mode == "IATA":
-            self.cost_incomplete = int(flt(self.iata_amount) <= 0)
+            self.cost_status = (
+                "Incomplete" if flt(self.iata_amount) <= 0 else "Complete"
+            )
         else:
-            self.cost_incomplete = int(flt(self.supplier_cost) <= 0)
+            self.cost_status = (
+                "Incomplete" if flt(self.supplier_cost) <= 0 else "Complete"
+            )
 
     def validate_invoice_number(self):
         if not self.invoice_number:

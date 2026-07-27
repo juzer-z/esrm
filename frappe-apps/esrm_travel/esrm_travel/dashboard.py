@@ -226,10 +226,10 @@ def recalculate_ticket_profitability():
                 then ifnull(invoice_amount, 0) - ifnull(iata_amount, 0)
                 else ifnull(invoice_amount, 0) - ifnull(supplier_cost, 0)
             end,
-            cost_incomplete = case
+            cost_status = case
                 when payment_mode = 'IATA'
-                then if(ifnull(iata_amount, 0) <= 0, 1, 0)
-                else if(ifnull(supplier_cost, 0) <= 0, 1, 0)
+                then if(ifnull(iata_amount, 0) <= 0, 'Incomplete', 'Complete')
+                else if(ifnull(supplier_cost, 0) <= 0, 'Incomplete', 'Complete')
             end
         where docstatus != 2
         """
