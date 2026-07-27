@@ -32,6 +32,7 @@ frappe.ui.form.on("Ticket Booking", {
     refresh(frm) {
         frm.set_df_property("booking_owner", "read_only", frappe.session.user !== "Administrator");
         set_approved_cost_permissions(frm);
+        add_administrator_draft_delete_action(frm);
 
         if (!frm.is_new() && !frm.doc.sales_invoice && frm.doc.approval_status === "Approved") {
             frm.add_custom_button(__("Create Sales Invoice"), () => {
@@ -148,5 +149,22 @@ function set_approved_cost_permissions(frm) {
         "supplier_cost",
         "read_only",
         !(can_enter_cost && !is_iata && supplier_cost_missing)
+    );
+}
+
+function add_administrator_draft_delete_action(frm) {
+    if (
+        frappe.session.user !== "Administrator"
+        || frm.is_new()
+        || frm.doc.docstatus !== 0
+        || frm.doc.approval_status !== "Draft"
+    ) {
+        return;
+    }
+
+    frm.add_custom_button(
+        __("Delete Draft Booking"),
+        () => frm.savetrash(),
+        __("Actions")
     );
 }
