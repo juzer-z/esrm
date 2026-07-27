@@ -31,6 +31,7 @@ frappe.ui.form.on("Ticket Booking", {
 
     refresh(frm) {
         frm.set_df_property("booking_owner", "read_only", frappe.session.user !== "Administrator");
+        set_approved_cost_permissions(frm);
 
         if (!frm.is_new() && !frm.doc.sales_invoice && frm.doc.approval_status === "Approved") {
             frm.add_custom_button(__("Create Sales Invoice"), () => {
@@ -119,4 +120,33 @@ function calculate_profitability(frm) {
     }
 
     frm.set_value("discount", gross_amount - invoice_amount);
+}
+
+function set_approved_cost_permissions(frm) {
+    if (frm.is_new() || frm.doc.docstatus !== 1 || frm.doc.approval_status !== "Approved") {
+        return;
+    }
+
+    if (frappe.session.user === "Administrator") {
+        frm.set_df_property("iata_amount", "read_only", false);
+        frm.set_df_property("supplier_cost", "read_only", false);
+        return;
+    }
+
+    const is_owner = frappe.session.user === frm.doc.booking_owner;
+    const can_enter_cost = is_owner && !frm.doc.cost_entered_by_owner;
+    const is_iata = frm.doc.payment_mode === "IATA";
+    const iata_missing = flt(frm.doc.iata_amount) <= 0;
+    const supplier_cost_missing = flt(frm.doc.supplier_cost) <= 0;
+
+    frm.set_df_property(
+        "iata_amount",
+        "read_only",
+        !(can_enter_cost && is_iata && iata_missing)
+    );
+    frm.set_df_property(
+        "supplier_cost",
+        "read_only",
+        !(can_enter_cost && !is_iata && supplier_cost_missing)
+    );
 }

@@ -45,6 +45,7 @@ fixtures = [
 doc_events = {
     "Ticket Booking": {
         "on_update": "esrm_travel.approval_notifications.notify_ticket_booking_approval",
+        "on_update_after_submit": "esrm_travel.approval_notifications.notify_ticket_cost_entered",
     },
     "Sales Invoice": {
         "on_submit": "esrm_travel.workflow.on_submit_sales_invoice",

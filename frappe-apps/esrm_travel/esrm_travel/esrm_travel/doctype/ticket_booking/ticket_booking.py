@@ -36,9 +36,72 @@ class TicketBooking(Document):
         self.set_status()
 
     def before_update_after_submit(self):
+        self.validate_booking_owner_cost_update()
         self.validate_amounts()
         self.set_cost_completion()
         self.calculate_profitability()
+
+    def validate_booking_owner_cost_update(self):
+        if frappe.session.user == "Administrator":
+            return
+
+        if frappe.session.user != self.booking_owner:
+            frappe.throw(
+                _("Only the booking owner or Administrator can update an approved booking."),
+                frappe.PermissionError,
+            )
+
+        if self.approval_status != "Approved":
+            frappe.throw(
+                _("The booking owner can enter cost only after the booking is approved."),
+                frappe.PermissionError,
+            )
+
+        previous = self.get_doc_before_save()
+        if not previous:
+            frappe.throw(_("Unable to verify the previous booking values."))
+
+        if previous.cost_entered_by_owner:
+            frappe.throw(
+                _("You have already entered the booking cost. Only Administrator can change it now."),
+                frappe.PermissionError,
+            )
+
+        cost_field = "iata_amount" if previous.payment_mode == "IATA" else "supplier_cost"
+        if flt(previous.get(cost_field)) > 0:
+            frappe.throw(
+                _("The booking cost is already entered. Only Administrator can change it."),
+                frappe.PermissionError,
+            )
+
+        if flt(self.get(cost_field)) <= 0:
+            frappe.throw(
+                _("{0} must be greater than zero.").format(
+                    self.meta.get_label(cost_field)
+                )
+            )
+
+        allowed_changes = {
+            cost_field,
+            "cost_entered_by_owner",
+            "cost_status",
+            "commission",
+            "profit",
+        }
+        restricted_changes = [
+            field.fieldname
+            for field in self.meta.fields
+            if field.allow_on_submit
+            and field.fieldname not in allowed_changes
+            and self.has_value_changed(field.fieldname)
+        ]
+        if restricted_changes:
+            frappe.throw(
+                _("After approval, you can only enter the missing booking cost."),
+                frappe.PermissionError,
+            )
+
+        self.cost_entered_by_owner = 1
 
     def validate_amounts(self):
         amount_fields = [

@@ -71,9 +71,9 @@ def setup_workflow():
         return
     workflow = frappe.get_doc("Workflow", "Ticket Booking Approval")
     for state in workflow.states:
-        if state.state in {"Pending Approval", "Approved"}:
+        if state.state == "Pending Approval":
             state.allow_edit = APPROVER_ROLE
-        elif state.state in {"Draft", "Rejected"}:
+        elif state.state in {"Draft", "Approved", "Rejected"}:
             state.allow_edit = AGENT_ROLE
     for transition in workflow.transitions:
         if transition.action in {"Approve", "Reject"}:
