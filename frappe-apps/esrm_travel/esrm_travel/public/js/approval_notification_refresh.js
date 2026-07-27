@@ -2,6 +2,7 @@
     const POLL_INTERVAL_MS = 10000;
     let latestNotificationName = null;
     let pollingStarted = false;
+    let profitCardObserver = null;
 
     function getNotificationView() {
         return frappe.frappe_toolbar && frappe.frappe_toolbar.notifications;
@@ -59,6 +60,35 @@
         });
     }
 
+    function removeProfitCardForNonAdministrator() {
+        if (frappe.session.user === "Administrator") {
+            return;
+        }
+
+        const route = frappe.get_route();
+        if (route[0] !== "Workspaces" || route[1] !== "ESRM") {
+            return;
+        }
+
+        document
+            .querySelectorAll('.widget[data-widget-name="Profit"]')
+            .forEach((widget) => (widget.closest(".ce-block") || widget).remove());
+    }
+
+    function watchProfitCardVisibility() {
+        if (frappe.session.user === "Administrator" || profitCardObserver) {
+            return;
+        }
+
+        profitCardObserver = new MutationObserver(removeProfitCardForNonAdministrator);
+        profitCardObserver.observe(document.body, { childList: true, subtree: true });
+        removeProfitCardForNonAdministrator();
+    }
+
     $(document).on("toolbar_setup", startPolling);
+    $(document).on("page-change", () => {
+        window.setTimeout(removeProfitCardForNonAdministrator, 0);
+    });
     $(startPolling);
+    $(watchProfitCardVisibility);
 })();

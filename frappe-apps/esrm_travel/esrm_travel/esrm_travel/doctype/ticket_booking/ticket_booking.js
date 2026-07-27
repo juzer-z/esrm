@@ -112,10 +112,10 @@ function calculate_profitability(frm) {
 
     if (frm.doc.payment_mode === "IATA") {
         frm.set_value("commission", gross_amount - iata_amount);
-        frm.set_value("profit", invoice_amount - iata_amount);
+        frm.set_value("profit", iata_amount > 0 ? invoice_amount - iata_amount : 0);
     } else {
         frm.set_value("commission", 0);
-        frm.set_value("profit", invoice_amount - supplier_cost);
+        frm.set_value("profit", supplier_cost > 0 ? invoice_amount - supplier_cost : 0);
     }
 
     frm.set_value("discount", gross_amount - invoice_amount);

@@ -223,8 +223,16 @@ def recalculate_ticket_profitability():
             discount = ifnull(gross_amount, 0) - ifnull(invoice_amount, 0),
             profit = case
                 when payment_mode = 'IATA'
-                then ifnull(invoice_amount, 0) - ifnull(iata_amount, 0)
-                else ifnull(invoice_amount, 0) - ifnull(supplier_cost, 0)
+                then if(
+                    ifnull(iata_amount, 0) > 0,
+                    ifnull(invoice_amount, 0) - ifnull(iata_amount, 0),
+                    0
+                )
+                else if(
+                    ifnull(supplier_cost, 0) > 0,
+                    ifnull(invoice_amount, 0) - ifnull(supplier_cost, 0),
+                    0
+                )
             end,
             cost_status = case
                 when payment_mode = 'IATA'
@@ -272,7 +280,10 @@ def setup_number_cards():
             "document_type": "Ticket Booking",
             "function": "Sum",
             "aggregate_function_based_on": "profit",
-            "filters_json": [["Ticket Booking", "docstatus", "!=", "2", False]],
+            "filters_json": [
+                ["Ticket Booking", "docstatus", "!=", "2", False],
+                ["Ticket Booking", "cost_status", "=", "Complete", False],
+            ],
             "color": "Green",
         },
         {

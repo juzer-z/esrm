@@ -65,10 +65,10 @@ class TicketBooking(Document):
 
         if self.payment_mode == "IATA":
             self.commission = gross_amount - iata_amount
-            self.profit = invoice_amount - iata_amount
+            self.profit = invoice_amount - iata_amount if iata_amount > 0 else 0
         else:
             self.commission = 0
-            self.profit = invoice_amount - supplier_cost
+            self.profit = invoice_amount - supplier_cost if supplier_cost > 0 else 0
 
         self.discount = gross_amount - invoice_amount
 
