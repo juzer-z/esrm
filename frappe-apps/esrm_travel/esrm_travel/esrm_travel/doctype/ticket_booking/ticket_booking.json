@@ -178,6 +178,7 @@
   {
    "fieldname": "ticket_number",
    "fieldtype": "Data",
+   "in_standard_filter": 1,
    "label": "Ticket Number"
   },
   {
