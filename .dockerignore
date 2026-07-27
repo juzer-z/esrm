@@ -5,3 +5,12 @@
 !frappe-apps/
 !frappe-apps/esrm_travel/
 !frappe-apps/esrm_travel/**
+!frappe-apps/hrms/
+!frappe-apps/hrms/**
+frappe-apps/hrms/node_modules/
+frappe-apps/hrms/frontend/node_modules/
+frappe-apps/hrms/roster/node_modules/
+frappe-apps/hrms/**/node_modules/
+frappe-apps/hrms/hrms/public/dist/
+frappe-apps/hrms/hrms/public/frontend/
+frappe-apps/hrms/hrms/public/roster/

@@ -6,6 +6,7 @@ from werkzeug.utils import redirect
 AGENT_USER = "agent@esrm.local"
 AGENT_ROLE = "ESRM Agent"
 APPROVER_ROLE = "ESRM Approver"
+HR_MANAGER_ROLE = "HR Manager"
 ALLOWED_AGENT_MODULES = {
     "Accounts", "Communication", "Contacts", "Core", "Desk", "ESRM Travel",
     "Printing", "Selling", "Setup", "Utilities", "Workflow",
@@ -88,7 +89,11 @@ def setup_workflow():
 
 
 def configure_administrator():
-    for role in (AGENT_ROLE, APPROVER_ROLE):
+    roles = [AGENT_ROLE, APPROVER_ROLE]
+    if frappe.db.exists("Role", HR_MANAGER_ROLE):
+        roles.append(HR_MANAGER_ROLE)
+
+    for role in roles:
         if not frappe.db.exists("Has Role", {"parent": "Administrator", "role": role}):
             frappe.get_doc(
                 {

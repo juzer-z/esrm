@@ -1,0 +1,4 @@
+[submodule "frappe-apps/hrms"]
+	path = frappe-apps/hrms
+	url = https://github.com/frappe/hrms.git
+	branch = version-15

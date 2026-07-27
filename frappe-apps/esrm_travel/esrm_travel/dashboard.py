@@ -2,6 +2,7 @@ import json
 
 import frappe
 from esrm_travel.access_control import setup_access_controls
+from esrm_travel.hrms_setup import setup_hrms
 from esrm_travel.branding import apply_branding
 from esrm_travel.chart_of_accounts import get_company, setup_chart_of_accounts
 from esrm_travel.print_formats import setup_print_formats
@@ -11,6 +12,7 @@ def setup_workspace():
     setup_access_controls()
     apply_branding()
     setup_chart_of_accounts()
+    setup_hrms()
     setup_print_formats()
     ensure_fiscal_years()
     ensure_accounting_defaults()

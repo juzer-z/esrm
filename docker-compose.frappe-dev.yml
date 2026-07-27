@@ -32,9 +32,15 @@ services:
     working_dir: /workspace
     volumes:
       - .:/workspace
+      - hrms-node-modules:/workspace/frappe-apps/hrms/node_modules
+      - hrms-frontend-node-modules:/workspace/frappe-apps/hrms/frontend/node_modules
+      - hrms-roster-node-modules:/workspace/frappe-apps/hrms/roster/node_modules
     ports:
       - "${ESRM_FRAPPE_HTTP_PORT:-18000}:8000"
       - "${ESRM_FRAPPE_SOCKET_PORT:-19000}:9000"
 
 volumes:
   frappe-mariadb-data:
+  hrms-node-modules:
+  hrms-frontend-node-modules:
+  hrms-roster-node-modules:
