@@ -31,6 +31,7 @@ frappe.ui.form.on("Ticket Booking", {
 
     refresh(frm) {
         frm.set_df_property("booking_owner", "read_only", frappe.session.user !== "Administrator");
+        setup_administrator_amendment(frm);
         set_approved_cost_permissions(frm);
         add_administrator_draft_delete_action(frm);
 
@@ -129,8 +130,6 @@ function set_approved_cost_permissions(frm) {
     }
 
     if (frappe.session.user === "Administrator") {
-        frm.set_df_property("iata_amount", "read_only", false);
-        frm.set_df_property("supplier_cost", "read_only", false);
         return;
     }
 
@@ -149,6 +148,87 @@ function set_approved_cost_permissions(frm) {
         "supplier_cost",
         "read_only",
         !(can_enter_cost && !is_iata && supplier_cost_missing)
+    );
+}
+
+const ADMINISTRATOR_AMENDMENT_FIELDS = [
+    "customer",
+    "reference",
+    "invoice_number",
+    "booking_owner",
+    "issue_date",
+    "passenger_name",
+    "passport_no",
+    "purpose",
+    "pnr",
+    "ticket_number",
+    "airline",
+    "flight_date",
+    "flight_number",
+    "payment_mode",
+    "supplier_reference",
+    "travel_type",
+    "trip_type",
+    "sectors",
+    "gross_amount",
+    "iata_amount",
+    "supplier_cost",
+    "invoice_amount",
+    "remarks",
+    "uploaded_ticket",
+];
+
+function setup_administrator_amendment(frm) {
+    if (
+        frm.is_new()
+        || frm.doc.docstatus !== 1
+        || frm.doc.approval_status !== "Approved"
+    ) {
+        return;
+    }
+
+    ADMINISTRATOR_AMENDMENT_FIELDS.forEach((fieldname) => {
+        frm.set_df_property(fieldname, "read_only", true);
+    });
+    frm.set_df_property("amendment_reason", "read_only", true);
+
+    if (frappe.session.user !== "Administrator") {
+        return;
+    }
+
+    frm.add_custom_button(
+        __("Amend Approved Booking"),
+        () => {
+            frappe.prompt(
+                [
+                    {
+                        fieldname: "reason",
+                        fieldtype: "Small Text",
+                        label: __("Amendment Reason"),
+                        reqd: 1,
+                    },
+                ],
+                (values) => {
+                    frm.set_value("amendment_reason", values.reason).then(() => {
+                        ADMINISTRATOR_AMENDMENT_FIELDS.forEach((fieldname) => {
+                            frm.set_df_property(fieldname, "read_only", false);
+                        });
+                        frappe.show_alert({
+                            message: frm.doc.sales_invoice
+                                ? __(
+                                    "Edit mode enabled. Invoice-facing fields remain protected while Sales Invoice {0} is linked.",
+                                    [frm.doc.sales_invoice]
+                                )
+                                : __("Edit mode enabled. Save to record this amendment."),
+                            indicator: "blue",
+                        });
+                    });
+                },
+                __("Amend Approved Booking"),
+                __("Continue")
+            );
+        },
+        __("Actions")
     );
 }
 

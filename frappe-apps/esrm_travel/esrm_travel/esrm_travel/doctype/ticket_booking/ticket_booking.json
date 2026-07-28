@@ -53,7 +53,13 @@
   "outstanding_amount",
   "remarks_section",
   "remarks",
-  "uploaded_ticket"
+  "uploaded_ticket",
+  "amendment_audit_section",
+  "amendment_reason",
+  "last_amended_by",
+  "amendment_column_break",
+  "last_amended_at",
+  "amendment_count"
  ],
  "fields": [
   {
@@ -70,6 +76,7 @@
    "set_only_once": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -79,6 +86,7 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "reference",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -86,6 +94,7 @@
    "label": "Reference"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "invoice_number",
    "fieldtype": "Data",
    "in_global_search": 1,
@@ -94,6 +103,7 @@
    "label": "Invoice Number"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "booking_owner",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -134,6 +144,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "Today",
    "fieldname": "issue_date",
    "fieldtype": "Date",
@@ -146,6 +157,7 @@
    "label": "Traveller"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "passenger_name",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -153,11 +165,13 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "passport_no",
    "fieldtype": "Data",
    "label": "Passport Number"
   },
   {
+   "allow_on_submit": 1,
    "default": "Personal",
    "fieldname": "purpose",
    "fieldtype": "Select",
@@ -169,6 +183,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "pnr",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -176,12 +191,14 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "ticket_number",
    "fieldtype": "Data",
    "in_standard_filter": 1,
    "label": "Ticket Number"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "airline",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -194,6 +211,7 @@
    "label": "Booking Details"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "flight_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -208,6 +226,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "flight_number",
    "fieldtype": "Data",
    "label": "Primary Flight Number"
@@ -225,6 +244,7 @@
    "options": "IATA\nNon-IATA\nCard\nCash\nBank Transfer"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "supplier_reference",
    "fieldtype": "Data",
    "label": "Supplier Reference"
@@ -261,6 +281,7 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "sectors",
    "fieldtype": "Table",
    "label": "Flight Sectors",
@@ -272,6 +293,7 @@
    "label": "Amounts"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "gross_amount",
    "fieldtype": "Currency",
    "label": "Gross Amount"
@@ -310,6 +332,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "invoice_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -359,14 +382,60 @@
    "label": "Remarks"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "uploaded_ticket",
    "fieldtype": "Attach",
    "label": "Uploaded Ticket"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "amendment_audit_section",
+   "fieldtype": "Section Break",
+   "label": "Amendment Audit"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "amendment_reason",
+   "fieldtype": "Small Text",
+   "label": "Last Amendment Reason",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "last_amended_by",
+   "fieldtype": "Link",
+   "label": "Last Amended By",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amendment_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "last_amended_at",
+   "fieldtype": "Datetime",
+   "label": "Last Amended At",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "amendment_count",
+   "fieldtype": "Int",
+   "label": "Amendment Count",
+   "no_copy": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

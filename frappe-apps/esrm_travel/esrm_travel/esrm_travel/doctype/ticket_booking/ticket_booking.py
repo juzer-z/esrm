@@ -1,9 +1,50 @@
+import re
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import flt, getdate, nowdate
-import re
+from frappe.utils import flt, getdate, now, nowdate
+
+
+AMENDMENT_AUDIT_FIELDS = {
+    "amendment_reason",
+    "last_amended_by",
+    "last_amended_at",
+    "amendment_count",
+}
+AUTOMATIC_AFTER_SUBMIT_FIELDS = {
+    "route_summary",
+    "status",
+    "invoice_status",
+    "cost_status",
+    "cost_entered_by_owner",
+    "commission",
+    "discount",
+    "profit",
+    "paid_amount",
+    "outstanding_amount",
+    "sales_invoice",
+}
+INVOICE_BOUND_FIELDS = {
+    "customer",
+    "reference",
+    "invoice_number",
+    "issue_date",
+    "passenger_name",
+    "purpose",
+    "pnr",
+    "ticket_number",
+    "airline",
+    "flight_date",
+    "flight_number",
+    "travel_type",
+    "trip_type",
+    "sectors",
+    "gross_amount",
+    "invoice_amount",
+    "remarks",
+}
 
 
 class TicketBooking(Document):
@@ -36,15 +77,90 @@ class TicketBooking(Document):
         self.set_status()
 
     def before_update_after_submit(self):
-        self.validate_booking_owner_cost_update()
+        if frappe.session.user == "Administrator":
+            self.validate_administrator_amendment()
+        else:
+            self.validate_booking_owner_cost_update()
         self.validate_amounts()
         self.set_cost_completion()
         self.calculate_profitability()
 
-    def validate_booking_owner_cost_update(self):
-        if frappe.session.user == "Administrator":
+    def on_update_after_submit(self):
+        if getattr(self, "_administrator_amendment_fields", None):
+            labels = [
+                self.meta.get_label(fieldname) or fieldname
+                for fieldname in self._administrator_amendment_fields
+            ]
+            self.add_comment(
+                "Edit",
+                _(
+                    "Administrator amended approved booking fields: {0}. Reason: {1}"
+                ).format(", ".join(labels), self.amendment_reason),
+            )
+
+    def validate_administrator_amendment(self):
+        if self.approval_status != "Approved":
             return
 
+        previous = self.get_doc_before_save()
+        if not previous:
+            frappe.throw(_("Unable to verify the previous booking values."))
+
+        changed_fields = {
+            field.fieldname
+            for field in self.meta.fields
+            if field.fieldtype
+            not in {"Section Break", "Column Break", "Tab Break", "HTML", "Button"}
+            and self.has_value_changed(field.fieldname)
+        }
+        substantive_changes = sorted(
+            changed_fields - AMENDMENT_AUDIT_FIELDS - AUTOMATIC_AFTER_SUBMIT_FIELDS
+        )
+        if not substantive_changes:
+            return
+
+        reason = (self.amendment_reason or "").strip()
+        if not reason or not self.has_value_changed("amendment_reason"):
+            frappe.throw(
+                _(
+                    "Enter a new Amendment Reason before saving changes to an approved booking."
+                )
+            )
+
+        invoice_changes = sorted(set(substantive_changes) & INVOICE_BOUND_FIELDS)
+        if self.sales_invoice and invoice_changes:
+            invoice_status = frappe.db.get_value(
+                "Sales Invoice",
+                self.sales_invoice,
+                ["docstatus", "status"],
+                as_dict=True,
+            )
+            invoice_state = (
+                _("submitted")
+                if invoice_status and invoice_status.docstatus == 1
+                else _("draft")
+            )
+            frappe.throw(
+                _(
+                    "Booking fields used by Sales Invoice {0} cannot be changed while that {1} invoice is linked: {2}. "
+                    "Delete the draft invoice first, or cancel/amend the submitted invoice under accounting rules."
+                ).format(
+                    self.sales_invoice,
+                    invoice_state,
+                    ", ".join(
+                        self.meta.get_label(fieldname) or fieldname
+                        for fieldname in invoice_changes
+                    ),
+                )
+            )
+
+        self.amendment_reason = reason
+        self.last_amended_by = frappe.session.user
+        self.last_amended_at = now()
+        self.amendment_count = (previous.amendment_count or 0) + 1
+        self._administrator_amendment_fields = substantive_changes
+
+    def validate_booking_owner_cost_update(self):
         if frappe.session.user != self.booking_owner:
             frappe.throw(
                 _("Only the booking owner or Administrator can update an approved booking."),
