@@ -97,6 +97,8 @@ class TicketBooking(Document):
                     "Administrator amended approved booking fields: {0}. Reason: {1}"
                 ).format(", ".join(labels), self.amendment_reason),
             )
+        if getattr(self, "_sync_linked_draft_invoice", False):
+            self.sync_linked_draft_sales_invoice()
 
     def validate_administrator_amendment(self):
         if self.approval_status != "Approved":
@@ -135,30 +137,118 @@ class TicketBooking(Document):
                 ["docstatus", "status"],
                 as_dict=True,
             )
-            invoice_state = (
-                _("submitted")
-                if invoice_status and invoice_status.docstatus == 1
-                else _("draft")
-            )
-            frappe.throw(
-                _(
-                    "Booking fields used by Sales Invoice {0} cannot be changed while that {1} invoice is linked: {2}. "
-                    "Delete the draft invoice first, or cancel/amend the submitted invoice under accounting rules."
-                ).format(
-                    self.sales_invoice,
-                    invoice_state,
-                    ", ".join(
-                        self.meta.get_label(fieldname) or fieldname
-                        for fieldname in invoice_changes
-                    ),
+            if not invoice_status:
+                frappe.throw(
+                    _("Linked Sales Invoice {0} no longer exists.").format(
+                        self.sales_invoice
+                    )
                 )
-            )
+            if invoice_status.docstatus != 0:
+                invoice_state = (
+                    _("submitted") if invoice_status.docstatus == 1 else _("cancelled")
+                )
+                frappe.throw(
+                    _(
+                        "Booking fields used by Sales Invoice {0} cannot be changed while that invoice is {1}: {2}. "
+                        "Cancel and amend the submitted invoice under accounting rules first."
+                    ).format(
+                        self.sales_invoice,
+                        invoice_state,
+                        ", ".join(
+                            self.meta.get_label(fieldname) or fieldname
+                            for fieldname in invoice_changes
+                        ),
+                    )
+                )
+            self._sync_linked_draft_invoice = True
 
         self.amendment_reason = reason
         self.last_amended_by = frappe.session.user
         self.last_amended_at = now()
         self.amendment_count = (previous.amendment_count or 0) + 1
         self._administrator_amendment_fields = substantive_changes
+
+    def sync_linked_draft_sales_invoice(self):
+        invoice = frappe.get_doc("Sales Invoice", self.sales_invoice)
+        if invoice.docstatus != 0:
+            frappe.throw(
+                _("Only a draft Sales Invoice can be synchronized automatically.")
+            )
+
+        ticket_rows = list(invoice.get("esrm_ticket_bookings") or [])
+        current_row = next(
+            (row for row in ticket_rows if row.ticket_booking == self.name),
+            None,
+        )
+        if not current_row:
+            frappe.throw(
+                _(
+                    "Sales Invoice {0} does not contain a ticket row for Booking {1}."
+                ).format(invoice.name, self.name)
+            )
+
+        bookings = []
+        for row in ticket_rows:
+            booking = (
+                self
+                if row.ticket_booking == self.name
+                else frappe.get_doc("Ticket Booking", row.ticket_booking)
+            )
+            bookings.append(booking)
+
+        other_customers = {
+            booking.customer
+            for booking in bookings
+            if booking.name != self.name and booking.customer
+        }
+        if other_customers and (
+            len(other_customers) > 1 or self.customer not in other_customers
+        ):
+            frappe.throw(
+                _(
+                    "Customer cannot be changed because Sales Invoice {0} also contains bookings for another customer."
+                ).format(invoice.name)
+            )
+
+        rate = flt(self.invoice_amount) or flt(self.gross_amount)
+        if rate <= 0:
+            frappe.throw(
+                _("Invoice Amount or Gross Amount must be greater than zero.")
+            )
+
+        current_row.update(build_invoice_ticket_row(self, rate))
+
+        item = next(
+            (row for row in invoice.items if row.idx == current_row.idx),
+            None,
+        )
+        if not item:
+            frappe.throw(
+                _(
+                    "Sales Invoice {0} does not contain the matching item row for Booking {1}."
+                ).format(invoice.name, self.name)
+            )
+
+        settings = frappe.get_single("ESRM Travel Settings")
+        item.rate = rate
+        item.description = build_invoice_description(self)
+        item.income_account = get_booking_income_account(self, settings)
+
+        invoice.customer = self.customer
+        invoice.esrm_invoice_number = bookings[0].invoice_number
+        invoice.esrm_ticket_booking = bookings[0].name
+        invoice.due_date = get_invoice_due_date(bookings)
+        invoice.remarks = "\n\n".join(
+            build_invoice_description(booking) for booking in bookings
+        )
+        invoice.flags.ignore_permissions = True
+        invoice.save()
+        self.add_comment(
+            "Edit",
+            _("Linked draft Sales Invoice {0} was synchronized.").format(
+                invoice.name
+            ),
+        )
 
     def validate_booking_owner_cost_update(self):
         if frappe.session.user != self.booking_owner:
@@ -338,7 +428,16 @@ class TicketBooking(Document):
             paid_ratio = max(flt(invoice.grand_total) - flt(invoice.outstanding_amount), 0) / flt(invoice.grand_total)
 
         self.invoice_status = invoice.status or "Draft"
-        self.invoice_amount = invoice_amount
+        is_administrator_amendment = (
+            frappe.session.user == "Administrator"
+            and self.docstatus == 1
+            and self.approval_status == "Approved"
+            and self.has_value_changed("amendment_reason")
+        )
+        if not is_administrator_amendment:
+            self.invoice_amount = invoice_amount
+        else:
+            invoice_amount = flt(self.invoice_amount)
         self.outstanding_amount = max(invoice_amount - (invoice_amount * paid_ratio), 0)
         self.paid_amount = max(flt(self.invoice_amount) - flt(self.outstanding_amount), 0)
 

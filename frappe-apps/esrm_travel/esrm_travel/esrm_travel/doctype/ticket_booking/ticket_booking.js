@@ -216,7 +216,7 @@ function setup_administrator_amendment(frm) {
                         frappe.show_alert({
                             message: frm.doc.sales_invoice
                                 ? __(
-                                    "Edit mode enabled. Invoice-facing fields remain protected while Sales Invoice {0} is linked.",
+                                    "Edit mode enabled. Changes will sync to linked draft Sales Invoice {0}; submitted invoices remain protected.",
                                     [frm.doc.sales_invoice]
                                 )
                                 : __("Edit mode enabled. Save to record this amendment."),
