@@ -237,7 +237,7 @@ class TicketBooking(Document):
         invoice.customer = self.customer
         invoice.esrm_invoice_number = bookings[0].invoice_number
         invoice.esrm_ticket_booking = bookings[0].name
-        invoice.due_date = get_invoice_due_date(bookings)
+        invoice.due_date = get_invoice_due_date(bookings, invoice.posting_date)
         invoice.remarks = "\n\n".join(
             build_invoice_description(booking) for booking in bookings
         )
@@ -601,9 +601,9 @@ def get_booking_income_account(booking, settings):
     return income_account
 
 
-def get_invoice_due_date(bookings):
+def get_invoice_due_date(bookings, invoice_posting_date=None):
     dates = [booking.flight_date or booking.issue_date for booking in bookings if booking.flight_date or booking.issue_date]
-    posting_date = getdate(nowdate())
+    posting_date = getdate(invoice_posting_date or nowdate())
     booking_due_date = min(getdate(date) for date in dates) if dates else posting_date
     return max(booking_due_date, posting_date)
 
