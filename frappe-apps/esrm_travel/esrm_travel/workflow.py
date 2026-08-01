@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 
 
 PAYMENT_MODE_MAP = {
@@ -39,6 +39,7 @@ def bulk_submit_sales_invoices(invoice_names):
             invoice = frappe.get_doc("Sales Invoice", invoice_name)
             if invoice.docstatus != 0:
                 frappe.throw(_("Invoice is not a draft."))
+            prepare_invoice_dates_for_submission(invoice)
             invoice.submit()
             submitted.append(invoice_name)
         except Exception as exc:
@@ -47,6 +48,20 @@ def bulk_submit_sales_invoices(invoice_names):
             frappe.clear_messages()
 
     return {"submitted": submitted, "failed": failed}
+
+
+def prepare_invoice_dates_for_submission(invoice):
+    """Keep the draft's displayed posting date when submitting it in bulk."""
+    if invoice.meta.has_field("set_posting_time"):
+        invoice.set_posting_time = 1
+
+    posting_date = getdate(invoice.posting_date)
+    if not invoice.due_date or getdate(invoice.due_date) < posting_date:
+        invoice.due_date = posting_date
+
+    for payment in invoice.get("payment_schedule") or []:
+        if not payment.due_date or getdate(payment.due_date) < posting_date:
+            payment.due_date = posting_date
 
 
 def before_validate_payment_entry(doc, method=None):
