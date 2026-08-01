@@ -234,7 +234,13 @@ class TicketBooking(Document):
         item.description = build_invoice_description(self)
         item.income_account = get_booking_income_account(self, settings)
 
+        customer_name = (
+            frappe.db.get_value("Customer", self.customer, "customer_name")
+            or self.customer
+        )
         invoice.customer = self.customer
+        invoice.customer_name = customer_name
+        invoice.title = customer_name
         invoice.esrm_invoice_number = bookings[0].invoice_number
         invoice.esrm_ticket_booking = bookings[0].name
         invoice_due_date = get_invoice_due_date(bookings, invoice.posting_date)
