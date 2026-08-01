@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.utils import flt
 
 
@@ -10,6 +11,42 @@ PAYMENT_MODE_MAP = {
     },
     "Card": {"mode_of_payment": "Credit Card", "company_account_field": "default_bank_account"},
 }
+
+
+@frappe.whitelist()
+def bulk_submit_sales_invoices(invoice_names):
+    if frappe.session.user != "Administrator":
+        frappe.throw(
+            _("Only Administrator can bulk-submit Sales Invoices."),
+            frappe.PermissionError,
+        )
+
+    if isinstance(invoice_names, str):
+        invoice_names = frappe.parse_json(invoice_names)
+
+    invoice_names = list(dict.fromkeys(invoice_names or []))
+    if not invoice_names:
+        frappe.throw(_("Select at least one draft Sales Invoice."))
+    if len(invoice_names) > 100:
+        frappe.throw(_("Submit no more than 100 Sales Invoices at a time."))
+
+    submitted = []
+    failed = []
+    for index, invoice_name in enumerate(invoice_names):
+        savepoint = f"bulk_invoice_submit_{index}"
+        frappe.db.savepoint(savepoint)
+        try:
+            invoice = frappe.get_doc("Sales Invoice", invoice_name)
+            if invoice.docstatus != 0:
+                frappe.throw(_("Invoice is not a draft."))
+            invoice.submit()
+            submitted.append(invoice_name)
+        except Exception as exc:
+            frappe.db.rollback(save_point=savepoint)
+            failed.append({"name": invoice_name, "error": str(exc)})
+            frappe.clear_messages()
+
+    return {"submitted": submitted, "failed": failed}
 
 
 def before_validate_payment_entry(doc, method=None):

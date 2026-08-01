@@ -16,6 +16,10 @@ doctype_js = {
     "Sales Invoice": "public/js/sales_invoice.js",
 }
 
+doctype_list_js = {
+    "Sales Invoice": "public/js/sales_invoice_list.js",
+}
+
 before_request = "esrm_travel.access_control.redirect_agent_from_setup_wizard"
 
 after_migrate = "esrm_travel.dashboard.setup_workspace"
