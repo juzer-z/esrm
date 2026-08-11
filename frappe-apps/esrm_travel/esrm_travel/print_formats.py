@@ -154,10 +154,9 @@ def save_doc(doc):
         doc.save(ignore_permissions=True)
 
 def get_invoice_credit_summary(invoice_name):
-    """Return active credit-note rows and the revised customer invoice total."""
-    original_total = frappe.db.get_value(
-        "Sales Invoice", invoice_name, "grand_total"
-    ) or 0
+    """Build customer-facing invoice rows including draft or posted adjustments."""
+    invoice = frappe.get_doc("Sales Invoice", invoice_name)
+    original_total = invoice.grand_total or 0
     credit_notes = frappe.get_all(
         "Sales Invoice",
         filters={
@@ -169,8 +168,58 @@ def get_invoice_credit_summary(invoice_name):
         order_by="posting_date asc, creation asc",
     )
     ticket_rows = []
+    has_adjustments = False
+    for row in invoice.get("esrm_ticket_bookings") or []:
+        display_row = row.as_dict()
+        booking = (
+            frappe.db.get_value(
+                "Ticket Booking",
+                row.ticket_booking,
+                [
+                    "cancellation_status",
+                    "invoice_amount",
+                    "refund_amount",
+                    "cancellation_fee",
+                    "cancellation_date",
+                ],
+                as_dict=True,
+            )
+            if row.ticket_booking
+            else None
+        )
+        if booking and booking.cancellation_status == "Draft Invoice Revised":
+            has_adjustments = True
+            display_row["fare"] = booking.invoice_amount
+            ticket_rows.append(display_row)
+            refund_row = dict(display_row)
+            refund_row.update(
+                {
+                    "issue_date": booking.cancellation_date,
+                    "fare": -flt(booking.refund_amount),
+                    "remarks": "REFUND",
+                }
+            )
+            ticket_rows.append(refund_row)
+            if flt(booking.cancellation_fee):
+                fee_row = dict(display_row)
+                fee_row.update(
+                    {
+                        "issue_date": booking.cancellation_date,
+                        "passenger_name": "",
+                        "ticket_number": "",
+                        "route": "",
+                        "carrier": "",
+                        "fare": flt(booking.cancellation_fee),
+                        "remarks": "CANCELLATION FEE",
+                    }
+                )
+                ticket_rows.append(fee_row)
+        else:
+            ticket_rows.append(display_row)
+
     revised_total = flt(original_total)
     for credit in credit_notes:
+        has_adjustments = True
         credit_doc = frappe.get_doc("Sales Invoice", credit.name)
         revised_total += flt(credit.grand_total)
         for row in credit_doc.get("esrm_ticket_bookings") or []:
@@ -179,6 +228,7 @@ def get_invoice_credit_summary(invoice_name):
         "credit_notes": credit_notes,
         "tickets": ticket_rows,
         "revised_total": revised_total,
+        "has_adjustments": has_adjustments,
     }
 
 
@@ -189,11 +239,11 @@ ESRM_TICKET_INVOICE_HTML = """
 {% set tickets = doc.esrm_ticket_bookings or [] %}
 {% set credit_summary = get_invoice_credit_summary(doc.name) if not is_credit_note else none %}
 {% if credit_summary and credit_summary.tickets %}
-    {% set tickets = tickets + credit_summary.tickets %}
+    {% set tickets = credit_summary.tickets %}
 {% endif %}
 {% set company_name = "Ezzy Services & Resource Management" %}
 {% set company_address = settings.invoice_letterhead_address if settings.invoice_letterhead_address and settings.invoice_letterhead_address != company_name else "" %}
-{% set invoice_total = credit_summary.revised_total if credit_summary and credit_summary.credit_notes else (doc.rounded_total or doc.grand_total or 0) %}
+{% set invoice_total = credit_summary.revised_total if credit_summary and credit_summary.has_adjustments else (doc.rounded_total or doc.grand_total or 0) %}
 {% set customer_address = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else none %}
 {% if not tickets and doc.esrm_ticket_booking %}
     {% set booking = frappe.get_doc("Ticket Booking", doc.esrm_ticket_booking) %}
@@ -482,7 +532,7 @@ ESRM_TICKET_INVOICE_HTML = """
 
     <table class="esrm-title-row">
         <tr>
-            <td><div class="esrm-title">{{ "Credit Note" if is_credit_note else ("Updated Invoice" if credit_summary and credit_summary.credit_notes else "Invoice") }}</div></td>
+            <td><div class="esrm-title">{{ "Credit Note" if is_credit_note else ("Updated Invoice" if credit_summary and credit_summary.has_adjustments else "Invoice") }}</div></td>
             <td>
                 <table class="esrm-meta-table">
                     <tr>
