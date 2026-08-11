@@ -51,6 +51,16 @@
   "column_break_4",
   "paid_amount",
   "outstanding_amount",
+  "cancellation_section",
+  "cancellation_status",
+  "cancellation_date",
+  "cancellation_reason",
+  "cancellation_column_break",
+  "refund_amount",
+  "cancellation_fee",
+  "net_credit_amount",
+  "revised_invoice_amount",
+  "credit_note",
   "remarks_section",
   "remarks",
   "uploaded_ticket",
@@ -374,6 +384,76 @@
    "fieldname": "outstanding_amount",
    "fieldtype": "Currency",
    "label": "Outstanding Amount",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "cancellation_section",
+   "fieldtype": "Section Break",
+   "label": "Cancellation / Refund"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Active",
+   "fieldname": "cancellation_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Cancellation Status",
+   "options": "Active\nCredit Note Draft\nCredit Note Issued\nRefunded",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "cancellation_date",
+   "fieldtype": "Date",
+   "label": "Cancellation Date",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "cancellation_reason",
+   "fieldtype": "Small Text",
+   "label": "Cancellation Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancellation_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "refund_amount",
+   "fieldtype": "Currency",
+   "label": "Refund Before Cancellation Fee",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "cancellation_fee",
+   "fieldtype": "Currency",
+   "label": "Cancellation Fee",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "net_credit_amount",
+   "fieldtype": "Currency",
+   "label": "Net Credit Amount",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "revised_invoice_amount",
+   "fieldtype": "Currency",
+   "label": "Revised Invoice Amount",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "credit_note",
+   "fieldtype": "Link",
+   "label": "Credit Note",
+   "options": "Sales Invoice",
    "read_only": 1
   },
   {
