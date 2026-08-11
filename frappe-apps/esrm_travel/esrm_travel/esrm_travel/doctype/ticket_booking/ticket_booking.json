@@ -399,7 +399,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Cancellation Status",
-   "options": "Active\nCredit Note Draft\nCredit Note Issued\nRefunded",
+   "options": "Active\nDraft Invoice Revised\nCredit Note Draft\nCredit Note Issued\nRefunded",
    "read_only": 1
   },
   {

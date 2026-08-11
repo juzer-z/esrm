@@ -341,12 +341,15 @@ function add_ticket_cancellation_action(frm) {
                             if (!r.message) {
                                 return;
                             }
+                            const result = r.message;
+                            const document_name = result.name || result;
+                            const document_type = result.document_type || __("Credit Note");
                             frappe.show_alert({
-                                message: __("Draft Credit Note {0} created", [r.message]),
+                                message: __("{0} {1} created", [document_type, document_name]),
                                 indicator: "green",
                             });
                             frm.reload_doc().then(() => {
-                                frappe.set_route("Form", "Sales Invoice", r.message);
+                                frappe.set_route("Form", "Sales Invoice", document_name);
                             });
                         },
                     });

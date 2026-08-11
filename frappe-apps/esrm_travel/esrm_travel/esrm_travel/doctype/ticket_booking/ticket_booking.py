@@ -524,8 +524,8 @@ def create_ticket_credit_note(
         )
 
     original_invoice = frappe.get_doc("Sales Invoice", booking.sales_invoice)
-    if original_invoice.docstatus != 1 or original_invoice.is_return:
-        frappe.throw(_("The linked original Sales Invoice must be submitted."))
+    if original_invoice.docstatus == 2 or original_invoice.is_return:
+        frappe.throw(_("The linked original Sales Invoice cannot be cancelled or a return."))
 
     original_amount = get_booking_invoice_row_amount(booking.name, original_invoice.name)
     if original_amount <= 0:
@@ -546,6 +546,45 @@ def create_ticket_credit_note(
 
     net_credit = refund_amount - cancellation_fee
     revised_amount = original_amount - net_credit
+
+    cancellation_values = {
+        "cancellation_date": cancellation_date or nowdate(),
+        "cancellation_reason": (cancellation_reason or "").strip(),
+        "refund_amount": refund_amount,
+        "cancellation_fee": cancellation_fee,
+        "net_credit_amount": net_credit,
+        "revised_invoice_amount": revised_amount,
+        "status": "Cancelled",
+    }
+
+    if original_invoice.docstatus == 0:
+        revise_draft_invoice_for_cancellation(
+            booking,
+            original_invoice,
+            revised_amount,
+            refund_amount,
+            cancellation_fee,
+            cancellation_values["cancellation_reason"],
+        )
+        cancellation_values.update(
+            {
+                "cancellation_status": "Draft Invoice Revised",
+                "invoice_status": "Draft",
+            }
+        )
+        frappe.db.set_value(
+            "Ticket Booking",
+            booking.name,
+            cancellation_values,
+            update_modified=True,
+        )
+        booking.add_comment(
+            "Info",
+            _("Draft Sales Invoice {0} revised after ticket cancellation.").format(
+                original_invoice.name
+            ),
+        )
+        return {"name": original_invoice.name, "document_type": "Updated Invoice"}
 
     from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
@@ -623,20 +662,16 @@ def create_ticket_credit_note(
     )
     credit_note.insert(ignore_permissions=True)
 
+    cancellation_values.update(
+        {
+            "cancellation_status": "Credit Note Draft",
+            "credit_note": credit_note.name,
+        }
+    )
     frappe.db.set_value(
         "Ticket Booking",
         booking.name,
-        {
-            "cancellation_status": "Credit Note Draft",
-            "cancellation_date": cancellation_date or nowdate(),
-            "cancellation_reason": (cancellation_reason or "").strip(),
-            "refund_amount": refund_amount,
-            "cancellation_fee": cancellation_fee,
-            "net_credit_amount": net_credit,
-            "revised_invoice_amount": revised_amount,
-            "credit_note": credit_note.name,
-            "status": "Cancelled",
-        },
+        cancellation_values,
         update_modified=True,
     )
     booking.add_comment(
@@ -645,7 +680,52 @@ def create_ticket_credit_note(
             credit_note.name, net_credit
         ),
     )
-    return credit_note.name
+    return {"name": credit_note.name, "document_type": "Credit Note"}
+
+
+def revise_draft_invoice_for_cancellation(
+    booking, invoice, revised_amount, refund_amount, cancellation_fee, reason
+):
+    ticket_row = next(
+        (
+            row
+            for row in invoice.get("esrm_ticket_bookings") or []
+            if row.ticket_booking == booking.name
+        ),
+        None,
+    )
+    if not ticket_row:
+        frappe.throw(_("The ticket row is missing from the draft Sales Invoice."))
+    item = next((row for row in invoice.items if row.idx == ticket_row.idx), None)
+    if not item:
+        frappe.throw(_("The matching item is missing from the draft Sales Invoice."))
+
+    item.rate = revised_amount
+    item.description = _(
+        "Cancelled ticket {0}; refund {1}; cancellation fee {2}. Reason: {3}"
+    ).format(
+        booking.ticket_number or booking.name,
+        refund_amount,
+        cancellation_fee,
+        reason,
+    )
+    ticket_row.fare = revised_amount
+    ticket_row.remarks = _("CANCELLED / REFUND")
+    invoice.remarks = "\n\n".join(
+        filter(
+            None,
+            [
+                invoice.remarks,
+                _(
+                    "Ticket Booking {0} cancelled. Refund: {1}; fee: {2}; revised amount: {3}."
+                ).format(
+                    booking.name, refund_amount, cancellation_fee, revised_amount
+                ),
+            ],
+        )
+    )
+    invoice.flags.ignore_permissions = True
+    invoice.save()
 
 
 @frappe.whitelist()
