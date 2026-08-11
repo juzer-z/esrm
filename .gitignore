@@ -57,6 +57,8 @@ private/backups/
 
 # Local delivery/staging artifacts
 production-delivery/
+.live-recovery/
+.recovery-tools/
 
 # Temporary files
 .tmp/

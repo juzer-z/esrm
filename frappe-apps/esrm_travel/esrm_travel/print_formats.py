@@ -2,6 +2,7 @@ import base64
 from pathlib import Path
 
 import frappe
+from frappe.utils import flt
 
 
 PRINT_FORMAT_NAME = "ESRM Ticket Invoice"
@@ -152,13 +153,47 @@ def save_doc(doc):
     else:
         doc.save(ignore_permissions=True)
 
+def get_invoice_credit_summary(invoice_name):
+    """Return active credit-note rows and the revised customer invoice total."""
+    original_total = frappe.db.get_value(
+        "Sales Invoice", invoice_name, "grand_total"
+    ) or 0
+    credit_notes = frappe.get_all(
+        "Sales Invoice",
+        filters={
+            "return_against": invoice_name,
+            "is_return": 1,
+            "docstatus": ["<", 2],
+        },
+        fields=["name", "grand_total", "docstatus"],
+        order_by="posting_date asc, creation asc",
+    )
+    ticket_rows = []
+    revised_total = flt(original_total)
+    for credit in credit_notes:
+        credit_doc = frappe.get_doc("Sales Invoice", credit.name)
+        revised_total += flt(credit.grand_total)
+        for row in credit_doc.get("esrm_ticket_bookings") or []:
+            ticket_rows.append(row.as_dict())
+    return {
+        "credit_notes": credit_notes,
+        "tickets": ticket_rows,
+        "revised_total": revised_total,
+    }
+
+
 ESRM_TICKET_INVOICE_HTML = """
 {% set settings = frappe.get_doc("ESRM Travel Settings") %}
 {% set invoice_no = doc.esrm_invoice_number or doc.name %}
+{% set is_credit_note = doc.is_return and doc.return_against %}
 {% set tickets = doc.esrm_ticket_bookings or [] %}
+{% set credit_summary = get_invoice_credit_summary(doc.name) if not is_credit_note else none %}
+{% if credit_summary and credit_summary.tickets %}
+    {% set tickets = tickets + credit_summary.tickets %}
+{% endif %}
 {% set company_name = "Ezzy Services & Resource Management" %}
 {% set company_address = settings.invoice_letterhead_address if settings.invoice_letterhead_address and settings.invoice_letterhead_address != company_name else "" %}
-{% set invoice_total = doc.rounded_total or doc.grand_total or 0 %}
+{% set invoice_total = credit_summary.revised_total if credit_summary and credit_summary.credit_notes else (doc.rounded_total or doc.grand_total or 0) %}
 {% set customer_address = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else none %}
 {% if not tickets and doc.esrm_ticket_booking %}
     {% set booking = frappe.get_doc("Ticket Booking", doc.esrm_ticket_booking) %}
@@ -447,7 +482,7 @@ ESRM_TICKET_INVOICE_HTML = """
 
     <table class="esrm-title-row">
         <tr>
-            <td><div class="esrm-title">Invoice</div></td>
+            <td><div class="esrm-title">{{ "Credit Note" if is_credit_note else ("Updated Invoice" if credit_summary and credit_summary.credit_notes else "Invoice") }}</div></td>
             <td>
                 <table class="esrm-meta-table">
                     <tr>
@@ -462,6 +497,18 @@ ESRM_TICKET_INVOICE_HTML = """
                         <td class="esrm-meta-label">Currency</td>
                         <td>{{ doc.currency or "BDT" }}</td>
                     </tr>
+                    {% if is_credit_note %}
+                    <tr>
+                        <td class="esrm-meta-label">Against Invoice</td>
+                        <td>{{ doc.return_against }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if credit_summary and credit_summary.credit_notes %}
+                    <tr>
+                        <td class="esrm-meta-label">Credit Note</td>
+                        <td>{{ credit_summary.credit_notes | map(attribute="name") | join(", ") }}</td>
+                    </tr>
+                    {% endif %}
                 </table>
             </td>
         </tr>
@@ -498,7 +545,7 @@ ESRM_TICKET_INVOICE_HTML = """
         </tr>
     </table>
 
-    <div class="esrm-intro">We are pleased to submit the invoice for the following issued air ticket(s):</div>
+    <div class="esrm-intro">{% if is_credit_note %}Credit for the following cancelled/refunded air ticket:{% else %}We are pleased to submit the invoice for the following issued air ticket(s):{% endif %}</div>
 
     <table class="esrm-ticket-table">
         <thead>
@@ -536,6 +583,7 @@ ESRM_TICKET_INVOICE_HTML = """
 
     <div class="esrm-amount-words"><span class="esrm-amount-words-label">Amount in words:</span> <span class="esrm-amount-words-value">{{ frappe.utils.money_in_words(invoice_total, doc.currency) }}</span></div>
 
+    {% if not is_credit_note %}
     <div class="esrm-payment-box">
         <div class="esrm-section-title">Payment Details</div>
         <div class="esrm-payment-note">{{ (settings.invoice_payment_instructions or "Please make payment in favor of " ~ company_name ~ " by account payee cheque or bank deposit.") | replace(company_name, "<strong>" ~ company_name ~ "</strong>") | safe }}</div>
@@ -558,6 +606,7 @@ ESRM_TICKET_INVOICE_HTML = """
             </tr>
         </table>
     </div>
+    {% endif %}
 
     <table class="esrm-footer-table">
         <tr>

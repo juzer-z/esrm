@@ -25,6 +25,14 @@ AUTOMATIC_AFTER_SUBMIT_FIELDS = {
     "paid_amount",
     "outstanding_amount",
     "sales_invoice",
+    "cancellation_status",
+    "cancellation_date",
+    "cancellation_reason",
+    "refund_amount",
+    "cancellation_fee",
+    "net_credit_amount",
+    "revised_invoice_amount",
+    "credit_note",
 }
 INVOICE_BOUND_FIELDS = {
     "customer",
@@ -456,6 +464,12 @@ class TicketBooking(Document):
             self.status = "Cancelled"
             return
 
+        if self.cancellation_status and self.cancellation_status != "Active":
+            self.status = (
+                "Refunded" if self.cancellation_status == "Refunded" else "Cancelled"
+            )
+            return
+
         if self.sales_invoice:
             if flt(self.outstanding_amount) <= 0 and flt(self.invoice_amount) > 0:
                 self.status = "Paid"
@@ -483,6 +497,155 @@ def make_sales_invoice(source_name):
         return booking.sales_invoice
 
     return make_sales_invoice_from_bookings([booking.name])
+
+
+@frappe.whitelist()
+def create_ticket_credit_note(
+    source_name, refund_amount, cancellation_fee=0, cancellation_date=None,
+    cancellation_reason=None
+):
+    """Create a draft credit note for one ticket on a submitted Sales Invoice."""
+    if frappe.session.user != "Administrator":
+        frappe.throw(
+            _("Only Administrator can cancel a ticket and create its credit note."),
+            frappe.PermissionError,
+        )
+
+    booking = frappe.get_doc("Ticket Booking", source_name)
+    if booking.docstatus != 1 or booking.approval_status != "Approved":
+        frappe.throw(_("Only an approved, submitted Ticket Booking can be cancelled."))
+    if not booking.sales_invoice:
+        frappe.throw(_("Create the Sales Invoice before cancelling this ticket."))
+    if booking.credit_note:
+        frappe.throw(
+            _("Credit Note {0} already exists for this booking.").format(
+                booking.credit_note
+            )
+        )
+
+    original_invoice = frappe.get_doc("Sales Invoice", booking.sales_invoice)
+    if original_invoice.docstatus != 1 or original_invoice.is_return:
+        frappe.throw(_("The linked original Sales Invoice must be submitted."))
+
+    original_amount = get_booking_invoice_row_amount(booking.name, original_invoice.name)
+    if original_amount <= 0:
+        frappe.throw(_("The original ticket amount could not be determined."))
+
+    refund_amount = flt(refund_amount)
+    cancellation_fee = flt(cancellation_fee)
+    if refund_amount <= 0:
+        frappe.throw(_("Refund Before Cancellation Fee must be greater than zero."))
+    if refund_amount > original_amount:
+        frappe.throw(
+            _("Refund Before Cancellation Fee cannot exceed {0}.").format(
+                frappe.format_value(original_amount, {"fieldtype": "Currency"})
+            )
+        )
+    if cancellation_fee < 0 or cancellation_fee >= refund_amount:
+        frappe.throw(_("Cancellation Fee must be zero or less than the refund amount."))
+
+    net_credit = refund_amount - cancellation_fee
+    revised_amount = original_amount - net_credit
+
+    from erpnext.controllers.sales_and_purchase_return import make_return_doc
+
+    credit_note = make_return_doc("Sales Invoice", original_invoice.name)
+    original_ticket_row = next(
+        (
+            row
+            for row in original_invoice.get("esrm_ticket_bookings") or []
+            if row.ticket_booking == booking.name
+        ),
+        None,
+    )
+    if not original_ticket_row:
+        frappe.throw(_("The ticket row is missing from the original Sales Invoice."))
+
+    original_item = next(
+        (row for row in original_invoice.items if row.idx == original_ticket_row.idx),
+        None,
+    )
+    if not original_item:
+        frappe.throw(_("The matching invoice item is missing from the original invoice."))
+
+    return_item = next(
+        (
+            row
+            for row in credit_note.items
+            if row.sales_invoice_item == original_item.name
+        ),
+        None,
+    )
+    if not return_item:
+        frappe.throw(_("ERPNext could not create the matching return item."))
+
+    credit_note.items = [return_item]
+    return_item.qty = -1
+    return_item.rate = net_credit
+    return_item.description = _("Refund for cancelled ticket {0}; cancellation fee {1}").format(
+        booking.ticket_number or booking.name,
+        frappe.format_value(cancellation_fee, {"fieldtype": "Currency"}),
+    )
+    credit_note.esrm_invoice_number = booking.invoice_number
+    credit_note.esrm_ticket_booking = booking.name
+    credit_note.set("esrm_ticket_bookings", [])
+    credit_note.append(
+        "esrm_ticket_bookings",
+        build_invoice_ticket_row(
+            booking,
+            -refund_amount,
+            remarks=_("REFUND"),
+        ),
+    )
+    if cancellation_fee:
+        fee_row = build_invoice_ticket_row(
+            booking, cancellation_fee, remarks=_("CANCELLATION FEE")
+        )
+        fee_row.update(
+            {
+                "issue_date": cancellation_date or nowdate(),
+                "passenger_name": "",
+                "ticket_number": "",
+                "route": "",
+                "carrier": "",
+            }
+        )
+        credit_note.append("esrm_ticket_bookings", fee_row)
+    credit_note.remarks = _(
+        "Credit note for cancelled Ticket Booking {0}. Refund before fee: {1}; "
+        "cancellation fee: {2}; net credit: {3}. Reason: {4}"
+    ).format(
+        booking.name,
+        refund_amount,
+        cancellation_fee,
+        net_credit,
+        (cancellation_reason or "").strip(),
+    )
+    credit_note.insert(ignore_permissions=True)
+
+    frappe.db.set_value(
+        "Ticket Booking",
+        booking.name,
+        {
+            "cancellation_status": "Credit Note Draft",
+            "cancellation_date": cancellation_date or nowdate(),
+            "cancellation_reason": (cancellation_reason or "").strip(),
+            "refund_amount": refund_amount,
+            "cancellation_fee": cancellation_fee,
+            "net_credit_amount": net_credit,
+            "revised_invoice_amount": revised_amount,
+            "credit_note": credit_note.name,
+            "status": "Cancelled",
+        },
+        update_modified=True,
+    )
+    booking.add_comment(
+        "Info",
+        _("Draft Credit Note {0} created for net credit {1}.").format(
+            credit_note.name, net_credit
+        ),
+    )
+    return credit_note.name
 
 
 @frappe.whitelist()
@@ -621,7 +784,7 @@ def get_invoice_due_date(bookings, invoice_posting_date=None):
     return max(booking_due_date, posting_date)
 
 
-def build_invoice_ticket_row(booking, rate):
+def build_invoice_ticket_row(booking, rate, remarks=None):
     return {
         "ticket_booking": booking.name,
         "purpose": booking.purpose,
@@ -632,7 +795,7 @@ def build_invoice_ticket_row(booking, rate):
         "route": booking.route_summary,
         "carrier": get_ticket_carrier(booking),
         "fare": rate,
-        "remarks": booking.remarks,
+        "remarks": remarks if remarks is not None else booking.remarks,
     }
 
 

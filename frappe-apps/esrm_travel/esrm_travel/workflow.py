@@ -88,21 +88,76 @@ def before_validate_payment_entry(doc, method=None):
 
 
 def on_submit_sales_invoice(doc, method=None):
+    if getattr(doc, "is_return", False):
+        sync_submitted_credit_note(doc)
+        return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
 
 
 def on_update_after_submit_sales_invoice(doc, method=None):
+    if getattr(doc, "is_return", False):
+        sync_submitted_credit_note(doc)
+        return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
 
 
 def on_cancel_sales_invoice(doc, method=None):
+    if getattr(doc, "is_return", False):
+        sync_cancelled_credit_note(doc)
+        return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 
 
+def sync_submitted_credit_note(doc):
+    for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
+        if not frappe.db.exists("Ticket Booking", booking_name):
+            continue
+        frappe.db.set_value(
+            "Ticket Booking",
+            booking_name,
+            {
+                "credit_note": doc.name,
+                "cancellation_status": "Credit Note Issued",
+                "invoice_status": "Credit Note Issued",
+                "status": "Cancelled",
+            },
+            update_modified=True,
+        )
+
+
+def sync_cancelled_credit_note(doc):
+    for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
+        if not frappe.db.exists("Ticket Booking", booking_name):
+            continue
+        linked_credit_note = frappe.db.get_value(
+            "Ticket Booking", booking_name, "credit_note"
+        )
+        if linked_credit_note != doc.name:
+            continue
+        frappe.db.set_value(
+            "Ticket Booking",
+            booking_name,
+            {
+                "credit_note": None,
+                "cancellation_status": "Active",
+                "invoice_status": frappe.db.get_value(
+                    "Sales Invoice",
+                    frappe.db.get_value("Ticket Booking", booking_name, "sales_invoice"),
+                    "status",
+                ) or "Not Invoiced",
+                "status": "Invoiced",
+            },
+            update_modified=True,
+        )
+
+
 def after_delete_sales_invoice(doc, method=None):
+    if getattr(doc, "is_return", False):
+        sync_cancelled_credit_note(doc)
+        return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 

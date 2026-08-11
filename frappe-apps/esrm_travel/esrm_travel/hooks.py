@@ -10,6 +10,12 @@ app_icon = "fa fa-plane"
 app_color = "#0b7285"
 source_link = ""
 
+jenv = {
+    "methods": [
+        "esrm_travel.print_formats.get_invoice_credit_summary",
+    ],
+}
+
 app_include_js = ["/assets/esrm_travel/js/approval_notification_refresh.js?v=eb8affd"]
 
 doctype_js = {

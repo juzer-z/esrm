@@ -34,6 +34,7 @@ frappe.ui.form.on("Ticket Booking", {
         setup_administrator_amendment(frm);
         set_approved_cost_permissions(frm);
         add_administrator_draft_delete_action(frm);
+        add_ticket_cancellation_action(frm);
 
         if (!frm.is_new() && !frm.doc.sales_invoice && frm.doc.approval_status === "Approved") {
             frm.add_custom_button(__("Create Sales Invoice"), () => {
@@ -62,6 +63,12 @@ frappe.ui.form.on("Ticket Booking", {
         if (frm.doc.sales_invoice) {
             frm.add_custom_button(__("Open Sales Invoice"), () => {
                 frappe.set_route("Form", "Sales Invoice", frm.doc.sales_invoice);
+            });
+        }
+
+        if (frm.doc.credit_note) {
+            frm.add_custom_button(__("Open Credit Note"), () => {
+                frappe.set_route("Form", "Sales Invoice", frm.doc.credit_note);
             });
         }
     },
@@ -245,6 +252,121 @@ function add_administrator_draft_delete_action(frm) {
     frm.add_custom_button(
         __("Delete Draft Booking"),
         () => frm.savetrash(),
+        __("Actions")
+    );
+}
+
+function add_ticket_cancellation_action(frm) {
+    if (
+        frappe.session.user !== "Administrator"
+        || frm.is_new()
+        || frm.doc.docstatus !== 1
+        || frm.doc.approval_status !== "Approved"
+        || !frm.doc.sales_invoice
+        || frm.doc.credit_note
+    ) {
+        return;
+    }
+
+    frm.add_custom_button(
+        __("Cancel Ticket / Create Credit Note"),
+        () => {
+            const original_amount = flt(frm.doc.invoice_amount || frm.doc.gross_amount);
+            const dialog = new frappe.ui.Dialog({
+                title: __("Cancel Ticket and Create Credit Note"),
+                fields: [
+                    {
+                        fieldname: "original_amount",
+                        fieldtype: "Currency",
+                        label: __("Original Ticket Amount"),
+                        default: original_amount,
+                        read_only: 1,
+                    },
+                    {
+                        fieldname: "refund_amount",
+                        fieldtype: "Currency",
+                        label: __("Refund Before Cancellation Fee"),
+                        default: original_amount,
+                        reqd: 1,
+                    },
+                    {
+                        fieldname: "cancellation_fee",
+                        fieldtype: "Currency",
+                        label: __("Cancellation Fee"),
+                        default: 0,
+                        reqd: 1,
+                    },
+                    {
+                        fieldname: "net_credit_preview",
+                        fieldtype: "Currency",
+                        label: __("Net Credit Amount"),
+                        default: original_amount,
+                        read_only: 1,
+                    },
+                    {
+                        fieldname: "cancellation_date",
+                        fieldtype: "Date",
+                        label: __("Cancellation Date"),
+                        default: frappe.datetime.get_today(),
+                        reqd: 1,
+                    },
+                    {
+                        fieldname: "cancellation_reason",
+                        fieldtype: "Small Text",
+                        label: __("Cancellation Reason"),
+                        reqd: 1,
+                    },
+                ],
+                primary_action_label: __("Create Draft Credit Note"),
+                primary_action(values) {
+                    const refund = flt(values.refund_amount);
+                    const fee = flt(values.cancellation_fee);
+                    if (refund <= 0 || fee < 0 || fee >= refund) {
+                        frappe.msgprint(__("Refund must be positive and the fee must be less than the refund."));
+                        return;
+                    }
+                    dialog.hide();
+                    frappe.call({
+                        method: "esrm_travel.esrm_travel.doctype.ticket_booking.ticket_booking.create_ticket_credit_note",
+                        args: {
+                            source_name: frm.doc.name,
+                            refund_amount: refund,
+                            cancellation_fee: fee,
+                            cancellation_date: values.cancellation_date,
+                            cancellation_reason: values.cancellation_reason,
+                        },
+                        freeze: true,
+                        freeze_message: __("Creating Credit Note..."),
+                        callback: (r) => {
+                            if (!r.message) {
+                                return;
+                            }
+                            frappe.show_alert({
+                                message: __("Draft Credit Note {0} created", [r.message]),
+                                indicator: "green",
+                            });
+                            frm.reload_doc().then(() => {
+                                frappe.set_route("Form", "Sales Invoice", r.message);
+                            });
+                        },
+                    });
+                },
+            });
+
+            const update_preview = () => {
+                dialog.set_value(
+                    "net_credit_preview",
+                    Math.max(
+                        flt(dialog.get_value("refund_amount"))
+                        - flt(dialog.get_value("cancellation_fee")),
+                        0
+                    )
+                );
+            };
+            dialog.fields_dict.refund_amount.df.onchange = update_preview;
+            dialog.fields_dict.cancellation_fee.df.onchange = update_preview;
+            dialog.show();
+        },
         __("Actions")
     );
 }
