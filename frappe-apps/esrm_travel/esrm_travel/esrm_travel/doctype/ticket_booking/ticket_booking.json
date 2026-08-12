@@ -139,7 +139,7 @@
    "default": "Draft",
    "fieldname": "approval_status",
    "fieldtype": "Select",
-   "in_list_view": 1,
+   "in_list_view": 0,
    "in_standard_filter": 1,
    "label": "Approval Status",
    "options": "Draft\nPending Approval\nApproved\nRejected",
