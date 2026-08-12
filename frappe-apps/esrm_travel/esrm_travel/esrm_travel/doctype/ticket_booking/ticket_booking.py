@@ -711,6 +711,18 @@ def revise_draft_invoice_for_cancellation(
     )
     ticket_row.fare = revised_amount
     ticket_row.remarks = _("CANCELLED / REFUND")
+
+    # Saving an older draft makes ERPNext validate its historical dates again.
+    # Preserve its posting date and ensure every due date is valid for that date.
+    if invoice.meta.has_field("set_posting_time"):
+        invoice.set_posting_time = 1
+    posting_date = getdate(invoice.posting_date or nowdate())
+    if not invoice.due_date or getdate(invoice.due_date) < posting_date:
+        invoice.due_date = posting_date
+    for payment in invoice.get("payment_schedule") or []:
+        if not payment.due_date or getdate(payment.due_date) < posting_date:
+            payment.due_date = posting_date
+
     invoice.remarks = "\n\n".join(
         filter(
             None,
