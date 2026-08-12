@@ -392,19 +392,21 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-ticket-table th,
     .esrm-ticket-table td {
         border: 1px solid #c8d0d8;
-        padding: 4px 5px;
-        vertical-align: top;
-        overflow-wrap: break-word;
+        line-height: 1.18;
+        padding: 5px 4px;
+        vertical-align: middle;
     }
     .esrm-ticket-table td {
-        font-size: 8pt;
+        font-size: 7.5pt;
     }
     .esrm-ticket-table th {
         background: #eaf1f5;
         color: #243b53;
-        font-size: 7pt;
+        font-size: 6.8pt;
         font-weight: 700;
+        line-height: 1.1;
         text-align: center;
+        white-space: nowrap;
     }
     .esrm-ticket-table .center {
         text-align: center !important;
@@ -417,7 +419,8 @@ ESRM_TICKET_INVOICE_HTML = """
         vertical-align: middle;
     }
     .esrm-ticket-table .ticket-number {
-        font-size: 7.5pt;
+        font-size: 7pt;
+        letter-spacing: -0.1px;
         white-space: nowrap;
     }
     .esrm-ticket-table .route {
@@ -426,9 +429,19 @@ ESRM_TICKET_INVOICE_HTML = """
     }
     .esrm-ticket-table .amount {
         padding-left: 3px;
-        padding-right: 7px;
+        padding-right: 5px;
         text-align: right;
         white-space: nowrap;
+    }
+    .esrm-ticket-table .passenger {
+        overflow-wrap: anywhere;
+        text-align: left;
+    }
+    .esrm-ticket-table .remarks {
+        font-size: 7pt;
+        line-height: 1.12;
+        overflow-wrap: anywhere;
+        text-align: left;
     }
     .esrm-total-row td {
         background: #f7f9fb;
@@ -598,16 +611,26 @@ ESRM_TICKET_INVOICE_HTML = """
     <div class="esrm-intro">{% if is_credit_note %}Credit for the following cancelled/refunded air ticket:{% else %}We are pleased to submit the invoice for the following issued air ticket(s):{% endif %}</div>
 
     <table class="esrm-ticket-table">
+        <colgroup>
+            <col style="width: 4%;">
+            <col style="width: 11%;">
+            <col style="width: 20%;">
+            <col style="width: 16%;">
+            <col style="width: 11%;">
+            <col style="width: 8%;">
+            <col style="width: 15%;">
+            <col style="width: 15%;">
+        </colgroup>
         <thead>
             <tr>
-                <th style="width: 4%;" class="center">#</th>
-                <th style="width: 11%;">Issue Date</th>
-                <th style="width: 19%;">Passenger</th>
-                <th style="width: 15%;">Ticket No.</th>
-                <th style="width: 12%;">Route</th>
-                <th style="width: 9%;">Airline</th>
-                <th style="width: 19%;" class="center">Amount</th>
-                <th style="width: 11%;">Remarks</th>
+                <th class="center">#</th>
+                <th>Issue Date</th>
+                <th>Passenger</th>
+                <th>Ticket No.</th>
+                <th>Route</th>
+                <th>Airline</th>
+                <th class="center">Amount</th>
+                <th>Remarks</th>
             </tr>
         </thead>
         <tbody>
@@ -615,12 +638,12 @@ ESRM_TICKET_INVOICE_HTML = """
             <tr>
                 <td class="center">{{ loop.index }}</td>
                 <td class="center">{{ frappe.utils.formatdate(ticket.issue_date, "dd/MM/yyyy") if ticket.issue_date else "" }}</td>
-                <td>{{ ticket.passenger_name or "" }}</td>
+                <td class="passenger">{{ ticket.passenger_name or "" }}</td>
                 <td class="ticket-number">{{ ticket.ticket_number or "" }}</td>
                 <td class="route center">{{ ticket.route or "" }}</td>
                 <td class="center">{{ ticket.carrier or "" }}</td>
                 <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(ticket.fare or 0) }}</td>
-                <td>{{ ticket.remarks or "" }}</td>
+                <td class="remarks">{{ ticket.remarks or "" }}</td>
             </tr>
             {% endfor %}
             <tr class="esrm-total-row">
