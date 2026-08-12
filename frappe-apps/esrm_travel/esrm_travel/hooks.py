@@ -10,7 +10,7 @@ app_icon = "fa fa-plane"
 app_color = "#0b7285"
 source_link = ""
 
-jenv = {
+jinja = {
     "methods": [
         "esrm_travel.print_formats.get_invoice_credit_summary",
     ],
