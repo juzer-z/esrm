@@ -49,6 +49,7 @@ fixtures = [
                     "Sales Invoice-esrm_invoice_number",
                     "Sales Invoice-esrm_ticket_booking",
                     "Sales Invoice-esrm_ticket_bookings",
+                    "Sales Invoice-esrm_passenger_names",
                     "Payment Entry-esrm_ticket_booking",
                 ],
             ]
@@ -62,6 +63,7 @@ doc_events = {
         "on_update_after_submit": "esrm_travel.approval_notifications.notify_ticket_cost_entered",
     },
     "Sales Invoice": {
+        "before_validate": "esrm_travel.workflow.set_sales_invoice_passenger_names",
         "on_submit": "esrm_travel.workflow.on_submit_sales_invoice",
         "on_update_after_submit": "esrm_travel.workflow.on_update_after_submit_sales_invoice",
         "on_cancel": "esrm_travel.workflow.on_cancel_sales_invoice",
