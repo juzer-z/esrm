@@ -24,6 +24,32 @@ def set_sales_invoice_passenger_names(doc, method=None):
     doc.esrm_passenger_names = "\n".join(passenger_names)
 
 
+def backfill_sales_invoice_passenger_names():
+    if not frappe.get_meta("Sales Invoice").has_field("esrm_passenger_names"):
+        return
+
+    for invoice_name in frappe.get_all("Sales Invoice", pluck="name"):
+        passenger_names = []
+        rows = frappe.get_all(
+            "ESRM Invoice Ticket",
+            filters={"parent": invoice_name, "parenttype": "Sales Invoice"},
+            fields=["passenger_name"],
+            order_by="idx asc",
+        )
+        for row in rows:
+            passenger_name = (row.passenger_name or "").strip()
+            if passenger_name and passenger_name not in passenger_names:
+                passenger_names.append(passenger_name)
+
+        frappe.db.set_value(
+            "Sales Invoice",
+            invoice_name,
+            "esrm_passenger_names",
+            "\n".join(passenger_names),
+            update_modified=False,
+        )
+
+
 @frappe.whitelist()
 def bulk_submit_sales_invoices(invoice_names):
     if frappe.session.user != "Administrator":

@@ -6,6 +6,7 @@ from esrm_travel.hrms_setup import setup_hrms
 from esrm_travel.branding import apply_branding
 from esrm_travel.chart_of_accounts import get_company, setup_chart_of_accounts
 from esrm_travel.print_formats import setup_print_formats
+from esrm_travel.workflow import backfill_sales_invoice_passenger_names
 
 
 def setup_workspace():
@@ -14,6 +15,7 @@ def setup_workspace():
     setup_chart_of_accounts()
     setup_hrms()
     setup_print_formats()
+    backfill_sales_invoice_passenger_names()
     ensure_fiscal_years()
     ensure_accounting_defaults()
     ensure_address_template()
