@@ -41,6 +41,18 @@
   {
     "doctype": "Custom Field",
     "dt": "Sales Invoice",
+    "fieldname": "esrm_passenger_names",
+    "fieldtype": "Small Text",
+    "in_global_search": 1,
+    "in_standard_filter": 1,
+    "insert_after": "esrm_ticket_bookings",
+    "label": "Passenger Name",
+    "name": "Sales Invoice-esrm_passenger_names",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
     "fieldname": "esrm_ticket_bookings",
     "fieldtype": "Table",
     "insert_after": "esrm_ticket_booking",

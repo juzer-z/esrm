@@ -13,6 +13,17 @@ PAYMENT_MODE_MAP = {
 }
 
 
+def set_sales_invoice_passenger_names(doc, method=None):
+    """Keep invoice passenger names searchable from the parent list view."""
+    passenger_names = []
+    for row in doc.get("esrm_ticket_bookings") or []:
+        passenger_name = (row.passenger_name or "").strip()
+        if passenger_name and passenger_name not in passenger_names:
+            passenger_names.append(passenger_name)
+
+    doc.esrm_passenger_names = "\n".join(passenger_names)
+
+
 @frappe.whitelist()
 def bulk_submit_sales_invoices(invoice_names):
     if frappe.session.user != "Administrator":
