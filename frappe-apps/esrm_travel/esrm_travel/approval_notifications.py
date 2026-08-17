@@ -35,16 +35,18 @@ def notify_ticket_cost_entered(doc, method=None):
     if (
         frappe.session.user == "Administrator"
         or frappe.session.user != doc.booking_owner
-        or not doc.cost_entered_by_owner
-        or (previous and previous.cost_entered_by_owner)
+        or not previous
     ):
         return
 
     cost_field = "iata_amount" if doc.payment_mode == "IATA" else "supplier_cost"
+    if not doc.has_value_changed(cost_field):
+        return
+
     cost_label = doc.meta.get_label(cost_field)
-    subject = _("Cost entered for Ticket Booking {0}").format(doc.name)
+    subject = _("Cost updated for Ticket Booking {0}").format(doc.name)
     message = _(
-        "{0} entered {1} for approved ticket booking {2}. The cost is now locked for the booking owner."
+        "{0} updated {1} for approved ticket booking {2}."
     ).format(doc.booking_owner, cost_label, doc.name)
     _create_in_app_notification(
         "Administrator",
