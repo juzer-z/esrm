@@ -1,6 +1,11 @@
 frappe.ui.form.on("Visa Service", {
     refresh(frm) {
         frm.set_query("service_package", () => ({ filters: { active: 1 } }));
+        const can_reassign_owner = frappe.session.user === "Administrator";
+        frm.set_df_property("service_owner", "read_only", !can_reassign_owner);
+        if (frm.is_new() && !frm.doc.service_owner) {
+            frm.set_value("service_owner", frappe.session.user);
+        }
 
         if (
             !frm.is_new()

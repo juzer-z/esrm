@@ -59,13 +59,16 @@ class VisaService(Document):
         self.name = make_autoname(series)
 
     def before_validate(self):
-        if self.is_new() and not self.service_owner:
+        if frappe.session.user != "Administrator":
+            if self.is_new():
+                self.service_owner = frappe.session.user
+            else:
+                self.service_owner = (
+                    frappe.db.get_value("Visa Service", self.name, "service_owner")
+                    or frappe.session.user
+                )
+        elif self.is_new() and not self.service_owner:
             self.service_owner = frappe.session.user
-        elif not self.is_new() and frappe.session.user != "Administrator":
-            self.service_owner = (
-                frappe.db.get_value("Visa Service", self.name, "service_owner")
-                or frappe.session.user
-            )
 
         if not self.approval_status:
             self.approval_status = "Draft"
