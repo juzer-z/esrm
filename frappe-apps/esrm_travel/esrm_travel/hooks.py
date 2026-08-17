@@ -58,6 +58,9 @@ fixtures = [
 ]
 
 doc_events = {
+    "Notification Log": {
+        "after_insert": "esrm_travel.notification_email.queue_notification_email",
+    },
     "Ticket Booking": {
         "on_update": "esrm_travel.approval_notifications.notify_ticket_booking_approval",
         "on_update_after_submit": "esrm_travel.approval_notifications.notify_ticket_cost_entered",

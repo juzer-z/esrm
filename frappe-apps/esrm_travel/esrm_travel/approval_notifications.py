@@ -29,11 +29,6 @@ def notify_ticket_booking_approval(doc, method=None):
     for user in recipients:
         _create_in_app_notification(user, doc, subject, message, document_url)
 
-    if _outgoing_email_is_configured():
-        _queue_email_notifications(
-            recipients, doc.name, subject, message, document_url
-        )
-
 
 def notify_ticket_cost_entered(doc, method=None):
     previous = doc.get_doc_before_save()
@@ -120,43 +115,3 @@ def _create_in_app_notification(user, doc, subject, message, document_url):
         }
     )
     notification.insert(ignore_permissions=True)
-
-
-def _outgoing_email_is_configured():
-    return bool(
-        frappe.db.exists(
-            "Email Account",
-            {
-                "enable_outgoing": 1,
-                "default_outgoing": 1,
-            },
-        )
-    )
-
-
-def _queue_email_notifications(users, document_name, subject, message, document_url):
-    recipients = [
-        email
-        for email in frappe.get_all(
-            "User",
-            filters={"name": ["in", users], "enabled": 1},
-            pluck="email",
-        )
-        if email
-    ]
-    if not recipients:
-        return
-
-    button = (
-        '<p><a href="{url}" style="background:#0b7285;color:#fff;'
-        'padding:10px 16px;text-decoration:none;border-radius:4px;">'
-        "{label}</a></p>"
-    ).format(url=escape(document_url, quote=True), label=_("Open Ticket Booking"))
-
-    frappe.sendmail(
-        recipients=recipients,
-        subject=subject,
-        message=f"<p>{escape(message)}</p>{button}",
-        reference_doctype="Ticket Booking",
-        reference_name=document_name,
-    )
