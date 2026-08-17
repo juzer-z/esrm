@@ -1,0 +1,7 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Use this lightweight layer for ESRM-only releases when framework and HRMS
+# dependencies have not changed. The base image already contains the editable
+# Python installation and compiled framework assets.
+COPY --chown=frappe:frappe frappe-apps/esrm_travel /home/frappe/frappe-bench/apps/esrm_travel
