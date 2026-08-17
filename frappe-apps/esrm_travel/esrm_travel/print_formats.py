@@ -457,6 +457,25 @@ ESRM_TICKET_INVOICE_HTML = """
         overflow-wrap: anywhere;
         text-align: left;
     }
+    .esrm-visa-table th {
+        font-size: 6.4pt;
+        line-height: 1.08;
+        white-space: normal;
+    }
+    .esrm-visa-table td {
+        font-size: 7.1pt;
+        overflow-wrap: anywhere;
+        padding: 4px 3px;
+    }
+    .esrm-visa-table .ticket-number {
+        font-size: 6.8pt;
+        white-space: normal;
+    }
+    .esrm-visa-table .amount {
+        font-size: 7pt;
+        padding-left: 2px;
+        padding-right: 3px;
+    }
     .esrm-total-row td {
         background: #f7f9fb;
         font-weight: 700;
@@ -624,17 +643,17 @@ ESRM_TICKET_INVOICE_HTML = """
 
     <div class="esrm-intro">{% if is_visa_invoice %}We are pleased to submit the invoice for the following visa assistance service(s):{% elif is_credit_note %}Credit for the following cancelled/refunded air ticket:{% else %}We are pleased to submit the invoice for the following issued air ticket(s):{% endif %}</div>
 
-    <table class="esrm-ticket-table">
+    <table class="esrm-ticket-table{% if is_visa_invoice %} esrm-visa-table{% endif %}">
         {% if is_visa_invoice %}
         <colgroup>
             <col style="width: 4%;">
+            <col style="width: 12%;">
+            <col style="width: 20%;">
             <col style="width: 13%;">
-            <col style="width: 22%;">
-            <col style="width: 15%;">
-            <col style="width: 12%;">
-            <col style="width: 16%;">
-            <col style="width: 12%;">
-            <col style="width: 6%;">
+            <col style="width: 11%;">
+            <col style="width: 18%;">
+            <col style="width: 14%;">
+            <col style="width: 8%;">
         </colgroup>
         <thead>
             <tr>
@@ -656,7 +675,7 @@ ESRM_TICKET_INVOICE_HTML = """
                 <td class="passenger">{{ visa.applicant_name or "" }}</td>
                 <td class="ticket-number">{{ visa.passport_number or "" }}</td>
                 <td class="center">{{ visa.country or "" }}</td>
-                <td>{{ visa.service_description or "" }}</td>
+                <td>{{ (visa.service_description or "") | replace((visa.country or "") ~ " - ", "", 1) }}</td>
                 <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(visa.amount or 0) }}</td>
                 <td class="remarks">{{ visa.remarks or "" }}</td>
             </tr>
