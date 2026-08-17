@@ -30,6 +30,11 @@ def notify_ticket_booking_approval(doc, method=None):
         _create_in_app_notification(user, doc, subject, message, document_url)
 
 
+def notify_service_approval(doc, method=None):
+    """Use the established approval routing for ticket and visa service records."""
+    notify_ticket_booking_approval(doc, method)
+
+
 def notify_ticket_cost_entered(doc, method=None):
     previous = doc.get_doc_before_save()
     if (
@@ -70,7 +75,8 @@ def _get_recipients(doc, state):
         )
         users.append("Administrator")
     else:
-        users = [doc.booking_owner] if doc.booking_owner else []
+        owner = getattr(doc, "booking_owner", None) or getattr(doc, "service_owner", None)
+        users = [owner] if owner else []
 
     return sorted(
         {
@@ -85,19 +91,24 @@ def _get_recipients(doc, state):
 
 
 def _get_message(doc, state):
-    passenger = doc.passenger_name or doc.name
+    if doc.doctype == "Visa Service":
+        subject_name = doc.applicant_name or doc.name
+        label = _("Visa Service")
+    else:
+        subject_name = doc.passenger_name or doc.name
+        label = _("Ticket Booking")
     if state == "Pending Approval":
         return (
-            _("Ticket Booking {0} requires approval").format(doc.name),
-            _("Ticket booking {0} for {1} was submitted and is waiting for your approval.").format(
-                doc.name, passenger
+            _("{0} {1} requires approval").format(label, doc.name),
+            _("{0} {1} for {2} was submitted and is waiting for your approval.").format(
+                label, doc.name, subject_name
             ),
         )
 
     return (
-        _("Ticket Booking {0} was {1}").format(doc.name, state.lower()),
-        _("Your ticket booking {0} for {1} was {2}.").format(
-            doc.name, passenger, state.lower()
+        _("{0} {1} was {2}").format(label, doc.name, state.lower()),
+        _("Your {0} {1} for {2} was {3}.").format(
+            label.lower(), doc.name, subject_name, state.lower()
         ),
     )
 

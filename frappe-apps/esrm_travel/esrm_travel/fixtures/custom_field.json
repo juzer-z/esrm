@@ -41,6 +41,40 @@
   {
     "doctype": "Custom Field",
     "dt": "Sales Invoice",
+    "fieldname": "esrm_visa_service",
+    "fieldtype": "Link",
+    "insert_after": "esrm_ticket_bookings",
+    "label": "Visa Service",
+    "name": "Sales Invoice-esrm_visa_service",
+    "options": "Visa Service",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "esrm_visa_services",
+    "fieldtype": "Table",
+    "insert_after": "esrm_visa_service",
+    "label": "ESRM Visa Services",
+    "name": "Sales Invoice-esrm_visa_services",
+    "options": "ESRM Invoice Visa Service",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "esrm_applicant_names",
+    "fieldtype": "Small Text",
+    "in_global_search": 1,
+    "in_standard_filter": 1,
+    "insert_after": "esrm_visa_services",
+    "label": "Visa Applicant Name",
+    "name": "Sales Invoice-esrm_applicant_names",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
     "fieldname": "esrm_passenger_names",
     "fieldtype": "Small Text",
     "in_global_search": 1,

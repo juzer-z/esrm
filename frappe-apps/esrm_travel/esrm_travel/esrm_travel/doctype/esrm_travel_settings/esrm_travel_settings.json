@@ -12,8 +12,10 @@
   "default_income_account",
   "domestic_income_account",
   "international_income_account",
+  "visa_income_account",
   "naming_section",
   "ticket_booking_series",
+  "visa_service_series",
   "email_notifications_section",
   "email_approval_required",
   "email_approval_decisions",
@@ -84,6 +86,12 @@
    "reqd": 1
   },
   {
+   "fieldname": "visa_income_account",
+   "fieldtype": "Link",
+   "label": "Visa Service Income Account",
+   "options": "Account"
+  },
+  {
    "fieldname": "naming_section",
    "fieldtype": "Section Break",
    "label": "Naming"
@@ -93,6 +101,12 @@
    "fieldname": "ticket_booking_series",
    "fieldtype": "Data",
    "label": "Ticket Booking Series"
+  },
+  {
+   "default": "VS-.YYYY.-",
+   "fieldname": "visa_service_series",
+   "fieldtype": "Data",
+   "label": "Visa Service Series"
   },
   {
    "description": "All notifications remain available in ERPNext. Enable email only for the categories that should also be delivered to each user's email address.",

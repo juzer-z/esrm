@@ -13,8 +13,8 @@ PAYMENT_MODE_MAP = {
 }
 
 
-def set_sales_invoice_passenger_names(doc, method=None):
-    """Keep invoice passenger names searchable from the parent list view."""
+def set_sales_invoice_search_names(doc, method=None):
+    """Keep ticket passengers and visa applicants searchable on invoices."""
     passenger_names = []
     for row in doc.get("esrm_ticket_bookings") or []:
         passenger_name = (row.passenger_name or "").strip()
@@ -22,6 +22,15 @@ def set_sales_invoice_passenger_names(doc, method=None):
             passenger_names.append(passenger_name)
 
     doc.esrm_passenger_names = "\n".join(passenger_names)
+    applicant_names = []
+    for row in doc.get("esrm_visa_services") or []:
+        applicant_name = (row.applicant_name or "").strip()
+        if applicant_name and applicant_name not in applicant_names:
+            applicant_names.append(applicant_name)
+    doc.esrm_applicant_names = "\n".join(applicant_names)
+
+
+set_sales_invoice_passenger_names = set_sales_invoice_search_names
 
 
 def backfill_sales_invoice_passenger_names():
@@ -130,6 +139,8 @@ def on_submit_sales_invoice(doc, method=None):
         return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
+    for service_name in get_related_visa_services_from_sales_invoice(doc):
+        sync_visa_service(service_name, sales_invoice_name=doc.name)
 
 
 def on_update_after_submit_sales_invoice(doc, method=None):
@@ -138,6 +149,8 @@ def on_update_after_submit_sales_invoice(doc, method=None):
         return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
+    for service_name in get_related_visa_services_from_sales_invoice(doc):
+        sync_visa_service(service_name, sales_invoice_name=doc.name)
 
 
 def on_cancel_sales_invoice(doc, method=None):
@@ -146,6 +159,8 @@ def on_cancel_sales_invoice(doc, method=None):
         return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
+    for service_name in get_related_visa_services_from_sales_invoice(doc):
+        sync_visa_service(service_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 
 
 def sync_submitted_credit_note(doc):
@@ -197,21 +212,29 @@ def after_delete_sales_invoice(doc, method=None):
         return
     for booking_name in get_related_ticket_bookings_from_sales_invoice(doc):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
+    for service_name in get_related_visa_services_from_sales_invoice(doc):
+        sync_visa_service(service_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 
 
 def on_submit_payment_entry(doc, method=None):
     for booking_name in get_related_ticket_bookings_from_payment_entry(doc):
         sync_ticket_booking(booking_name)
+    for service_name in get_related_visa_services_from_payment_entry(doc):
+        sync_visa_service(service_name)
 
 
 def on_update_after_submit_payment_entry(doc, method=None):
     for booking_name in get_related_ticket_bookings_from_payment_entry(doc):
         sync_ticket_booking(booking_name)
+    for service_name in get_related_visa_services_from_payment_entry(doc):
+        sync_visa_service(service_name)
 
 
 def on_cancel_payment_entry(doc, method=None):
     for booking_name in get_related_ticket_bookings_from_payment_entry(doc):
         sync_ticket_booking(booking_name)
+    for service_name in get_related_visa_services_from_payment_entry(doc):
+        sync_visa_service(service_name)
 
 
 def get_related_ticket_bookings_from_payment_entry(doc):
@@ -240,6 +263,26 @@ def get_related_ticket_bookings_from_sales_invoice(doc):
             booking_names.add(row.ticket_booking)
 
     return booking_names
+
+
+def get_related_visa_services_from_sales_invoice(doc):
+    service_names = set()
+    if getattr(doc, "esrm_visa_service", None):
+        service_names.add(doc.esrm_visa_service)
+    for row in doc.get("esrm_visa_services", []):
+        if row.visa_service:
+            service_names.add(row.visa_service)
+    return service_names
+
+
+def get_related_visa_services_from_payment_entry(doc):
+    service_names = set()
+    for row in doc.get("references", []):
+        if row.reference_doctype != "Sales Invoice" or not row.reference_name:
+            continue
+        invoice = frappe.get_doc("Sales Invoice", row.reference_name)
+        service_names.update(get_related_visa_services_from_sales_invoice(invoice))
+    return service_names
 
 
 def get_company_payment_account(company, mode_of_payment, company_account_field):
@@ -282,6 +325,36 @@ def sync_ticket_booking(booking_name, sales_invoice_name=None, clear_sales_invoi
             "paid_amount": booking.paid_amount,
             "outstanding_amount": booking.outstanding_amount,
             "status": booking.status,
+        },
+        update_modified=True,
+    )
+
+
+def sync_visa_service(service_name, sales_invoice_name=None, clear_sales_invoice=False):
+    if not service_name or not frappe.db.exists("Visa Service", service_name):
+        return
+
+    service = frappe.get_doc("Visa Service", service_name)
+    if clear_sales_invoice and service.sales_invoice == sales_invoice_name:
+        service.sales_invoice = None
+        service.invoice_status = "Not Invoiced"
+        service.paid_amount = 0
+        service.outstanding_amount = flt(service.invoice_amount)
+    elif sales_invoice_name and not service.sales_invoice:
+        service.sales_invoice = sales_invoice_name
+
+    if not clear_sales_invoice:
+        service.sync_invoice_details()
+    service.set_status()
+    frappe.db.set_value(
+        "Visa Service",
+        service.name,
+        {
+            "sales_invoice": service.sales_invoice,
+            "invoice_status": service.invoice_status,
+            "paid_amount": service.paid_amount,
+            "outstanding_amount": service.outstanding_amount,
+            "status": service.status,
         },
         update_modified=True,
     )

@@ -1,0 +1,21 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["visa_service","application_date","applicant_name","passport_number","country","service_description","amount","remarks"],
+ "fields": [
+  {"fieldname":"visa_service","fieldtype":"Link","label":"Visa Service","options":"Visa Service","in_list_view":1},
+  {"fieldname":"application_date","fieldtype":"Date","label":"Application Date","in_list_view":1},
+  {"fieldname":"applicant_name","fieldtype":"Data","label":"Applicant Name","in_list_view":1},
+  {"fieldname":"passport_number","fieldtype":"Data","label":"Passport No.","in_list_view":1},
+  {"fieldname":"country","fieldtype":"Link","label":"Country","options":"Country","in_list_view":1},
+  {"fieldname":"service_description","fieldtype":"Data","label":"Visa Service","in_list_view":1},
+  {"fieldname":"amount","fieldtype":"Currency","label":"Amount","in_list_view":1},
+  {"fieldname":"remarks","fieldtype":"Data","label":"Remarks"}
+ ],
+ "istable": 1,
+ "module": "ESRM Travel",
+ "name": "ESRM Invoice Visa Service",
+ "permissions": []
+}
