@@ -312,7 +312,11 @@ class TicketBooking(Document):
             for field in self.meta.fields
             if field.allow_on_submit
             and field.fieldname not in allowed_changes
-            and self.has_value_changed(field.fieldname)
+            and (
+                self.child_table_has_changed(previous, field)
+                if field.fieldtype == "Table"
+                else self.has_value_changed(field.fieldname)
+            )
         ]
         if restricted_changes:
             frappe.throw(
@@ -321,6 +325,25 @@ class TicketBooking(Document):
             )
 
         self.cost_entered_by_owner = 1
+
+    def child_table_has_changed(self, previous, table_field):
+        child_meta = frappe.get_meta(table_field.options)
+        value_fields = [
+            field.fieldname
+            for field in child_meta.fields
+            if field.fieldtype
+            not in {"Section Break", "Column Break", "Tab Break", "HTML", "Button"}
+        ]
+
+        def comparable_rows(rows):
+            return [
+                tuple(row.get(fieldname) for fieldname in value_fields)
+                for row in (rows or [])
+            ]
+
+        return comparable_rows(self.get(table_field.fieldname)) != comparable_rows(
+            previous.get(table_field.fieldname)
+        )
 
     def validate_amounts(self):
         amount_fields = [
