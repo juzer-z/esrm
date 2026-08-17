@@ -285,19 +285,7 @@ class TicketBooking(Document):
         if not previous:
             frappe.throw(_("Unable to verify the previous booking values."))
 
-        if previous.cost_entered_by_owner:
-            frappe.throw(
-                _("You have already entered the booking cost. Only Administrator can change it now."),
-                frappe.PermissionError,
-            )
-
         cost_field = "iata_amount" if previous.payment_mode == "IATA" else "supplier_cost"
-        if flt(previous.get(cost_field)) > 0:
-            frappe.throw(
-                _("The booking cost is already entered. Only Administrator can change it."),
-                frappe.PermissionError,
-            )
-
         if flt(self.get(cost_field)) <= 0:
             frappe.throw(
                 _("{0} must be greater than zero.").format(
@@ -321,7 +309,7 @@ class TicketBooking(Document):
         ]
         if restricted_changes:
             frappe.throw(
-                _("After approval, you can only enter the missing booking cost."),
+                _("After approval, you can only update the booking cost."),
                 frappe.PermissionError,
             )
 

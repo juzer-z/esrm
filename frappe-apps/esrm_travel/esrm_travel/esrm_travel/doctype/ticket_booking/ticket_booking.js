@@ -141,20 +141,17 @@ function set_approved_cost_permissions(frm) {
     }
 
     const is_owner = frappe.session.user === frm.doc.booking_owner;
-    const can_enter_cost = is_owner && !frm.doc.cost_entered_by_owner;
     const is_iata = frm.doc.payment_mode === "IATA";
-    const iata_missing = flt(frm.doc.iata_amount) <= 0;
-    const supplier_cost_missing = flt(frm.doc.supplier_cost) <= 0;
 
     frm.set_df_property(
         "iata_amount",
         "read_only",
-        !(can_enter_cost && is_iata && iata_missing)
+        !(is_owner && is_iata)
     );
     frm.set_df_property(
         "supplier_cost",
         "read_only",
-        !(can_enter_cost && !is_iata && supplier_cost_missing)
+        !(is_owner && !is_iata)
     );
 }
 
