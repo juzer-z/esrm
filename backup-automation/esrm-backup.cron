@@ -1,5 +1,4 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-CRON_TZ=Asia/Dhaka
-
-0 2 * * * root /home/frappe/esrm-production/backup/run-server-backup.sh >> /var/log/esrm-backup.log 2>&1
+# The production host runs UTC. 20:00 UTC is 02:00 Asia/Dhaka the next day.
+0 20 * * * root flock -n /var/lock/esrm-backup.lock /home/frappe/esrm-production/backup/run-server-backup.sh >> /var/log/esrm-backup.log 2>&1
