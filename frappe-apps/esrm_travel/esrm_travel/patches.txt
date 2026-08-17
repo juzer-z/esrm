@@ -1,0 +1,1 @@
+esrm_travel.patches.v1_0.set_recommended_notification_email_defaults
