@@ -298,7 +298,14 @@ class TicketBooking(Document):
             "cost_entered_by_owner",
             "cost_status",
             "commission",
+            "discount",
             "profit",
+            "route_summary",
+            "status",
+            "invoice_status",
+            "invoice_amount",
+            "paid_amount",
+            "outstanding_amount",
         }
         restricted_changes = [
             field.fieldname
