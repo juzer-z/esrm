@@ -14,6 +14,14 @@
   "international_income_account",
   "naming_section",
   "ticket_booking_series",
+  "email_notifications_section",
+  "email_approval_required",
+  "email_approval_decisions",
+  "email_assignments",
+  "email_notifications_column_break",
+  "email_booking_cost_updates",
+  "email_mentions_comments",
+  "email_general_notifications",
   "invoice_print_section",
   "invoice_letterhead_address",
   "invoice_payment_instructions",
@@ -85,6 +93,52 @@
    "fieldname": "ticket_booking_series",
    "fieldtype": "Data",
    "label": "Ticket Booking Series"
+  },
+  {
+   "description": "All notifications remain available in ERPNext. Enable email only for the categories that should also be delivered to each user's email address.",
+   "fieldname": "email_notifications_section",
+   "fieldtype": "Section Break",
+   "label": "Email Notifications"
+  },
+  {
+   "default": "1",
+   "fieldname": "email_approval_required",
+   "fieldtype": "Check",
+   "label": "Email Approval Requests"
+  },
+  {
+   "default": "1",
+   "fieldname": "email_approval_decisions",
+   "fieldtype": "Check",
+   "label": "Email Approval Decisions"
+  },
+  {
+   "default": "1",
+   "fieldname": "email_assignments",
+   "fieldtype": "Check",
+   "label": "Email Assignments"
+  },
+  {
+   "fieldname": "email_notifications_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "email_booking_cost_updates",
+   "fieldtype": "Check",
+   "label": "Email Booking Cost Updates"
+  },
+  {
+   "default": "0",
+   "fieldname": "email_mentions_comments",
+   "fieldtype": "Check",
+   "label": "Email Mentions and Comments"
+  },
+  {
+   "default": "0",
+   "fieldname": "email_general_notifications",
+   "fieldtype": "Check",
+   "label": "Email General/System Notifications"
   },
   {
    "fieldname": "invoice_print_section",
