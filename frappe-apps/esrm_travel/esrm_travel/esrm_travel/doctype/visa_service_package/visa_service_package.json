@@ -21,7 +21,7 @@
   {"default":"Standard","fieldname":"processing_type","fieldtype":"Select","label":"Processing Type","options":"Standard\nExpress\nUrgent","reqd":1,"in_list_view":1},
   {"default":"Single","fieldname":"number_of_entries","fieldtype":"Select","label":"Number of Entries","options":"Single\nDouble\nMultiple\nNot Applicable","reqd":1},
   {"fieldname":"applicant_type","fieldtype":"Select","label":"Applicant Type","options":"\nAdult\nChild\nInfant"},
-  {"fieldname":"nationality","fieldtype":"Link","label":"Nationality","options":"Country"},
+  {"default":"Bangladesh","fieldname":"nationality","fieldtype":"Link","label":"Nationality","options":"Country"},
   {"fieldname":"pricing_section","fieldtype":"Section Break","label":"Pricing"},
   {"default":"BDT","fieldname":"currency","fieldtype":"Link","label":"Currency","options":"Currency","reqd":1},
   {"default":"0","fieldname":"government_fee","fieldtype":"Currency","label":"Government / Embassy Fee","options":"currency"},

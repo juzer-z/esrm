@@ -70,6 +70,14 @@ class VisaService(Document):
         elif self.is_new() and not self.service_owner:
             self.service_owner = frappe.session.user
 
+        if self.is_new() and self.customer and not self.applicant_name:
+            self.applicant_name = (
+                frappe.db.get_value("Customer", self.customer, "customer_name")
+                or self.customer
+            )
+        if not self.nationality:
+            self.nationality = "Bangladesh"
+
         if not self.approval_status:
             self.approval_status = "Draft"
         if not self.application_status:
@@ -487,7 +495,7 @@ def build_invoice_description(service):
     parts = [
         f"Invoice No: {service.invoice_number}" if service.invoice_number else "",
         f"Applicant: {service.applicant_name}",
-        f"Passport: {mask_passport(service.passport_number)}",
+        f"Passport: {mask_passport(service.passport_number)}" if service.passport_number else "",
         f"Service: {get_service_summary(service)}",
         f"Travel Date: {service.intended_travel_date}" if service.intended_travel_date else "",
     ]

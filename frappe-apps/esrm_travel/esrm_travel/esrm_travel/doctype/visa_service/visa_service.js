@@ -60,6 +60,18 @@ frappe.ui.form.on("Visa Service", {
         });
     },
 
+    customer(frm) {
+        if (!frm.doc.customer) {
+            return;
+        }
+        frappe.db.get_value("Customer", frm.doc.customer, "customer_name").then((r) => {
+            const customer_name = r.message && r.message.customer_name;
+            if (customer_name) {
+                frm.set_value("applicant_name", customer_name);
+            }
+        });
+    },
+
     government_fee: calculate_amounts,
     service_charge: calculate_amounts,
     other_charges: calculate_amounts,
