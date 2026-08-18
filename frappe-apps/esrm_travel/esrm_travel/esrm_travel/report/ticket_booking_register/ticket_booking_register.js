@@ -1,29 +1,35 @@
 frappe.query_reports["Ticket Booking Register"] = {
     filters: [
         {
+            fieldname: "service_type",
+            label: __("Service Type"),
+            fieldtype: "Select",
+            options: "\nTicket\nVisa",
+        },
+        {
             fieldname: "search",
             label: __("Search"),
             fieldtype: "Data",
-            description: __("Ticket Number, Invoice Number, Customer, Passenger, or Reference"),
+            description: __("Ticket, passport, invoice, customer, passenger/applicant, destination, or reference"),
         },
         {
             fieldname: "from_date",
-            label: __("Issue Date From"),
+            label: __("Entry Date From"),
             fieldtype: "Date",
         },
         {
             fieldname: "to_date",
-            label: __("Issue Date To"),
+            label: __("Entry Date To"),
             fieldtype: "Date",
         },
         {
             fieldname: "flight_from_date",
-            label: __("Flight Date From"),
+            label: __("Travel Date From"),
             fieldtype: "Date",
         },
         {
             fieldname: "flight_to_date",
-            label: __("Flight Date To"),
+            label: __("Travel Date To"),
             fieldtype: "Date",
         },
         {
@@ -43,8 +49,14 @@ frappe.query_reports["Ticket Booking Register"] = {
             fieldtype: "Data",
         },
         {
+            fieldname: "destination_country",
+            label: __("Visa Destination"),
+            fieldtype: "Link",
+            options: "Country",
+        },
+        {
             fieldname: "booking_owner",
-            label: __("Booking Owner"),
+            label: __("Service Owner"),
             fieldtype: "Link",
             options: "User",
         },
@@ -56,9 +68,9 @@ frappe.query_reports["Ticket Booking Register"] = {
         },
         {
             fieldname: "status",
-            label: __("Booking Status"),
+            label: __("Status"),
             fieldtype: "Select",
-            options: "\nDraft\nTicketed\nInvoiced\nPartially Paid\nPaid\nTravelled\nRefunded\nCancelled",
+            options: "\nDraft\nTicketed\nInvoiced\nPartially Paid\nPaid\nTravelled\nCompleted\nCancelled\nRefunded",
         },
         {
             fieldname: "invoice_status",
