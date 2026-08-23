@@ -97,12 +97,12 @@ class TicketBooking(Document):
         self.create_sales_invoice_on_approval()
 
     def create_sales_invoice_on_approval(self):
-        """Atomically create and link a draft invoice when approval submits the booking."""
+        """Atomically create, submit, and link the invoice on booking approval."""
         if self.approval_status != "Approved" or self.sales_invoice:
             return
 
         try:
-            invoice_name = make_sales_invoice_from_bookings([self.name])
+            invoice_name = make_and_submit_sales_invoice([self.name])
         except Exception as exc:
             frappe.log_error(
                 title=f"Automatic invoice creation failed for {self.name}",
@@ -117,11 +117,13 @@ class TicketBooking(Document):
             )
 
         self.sales_invoice = invoice_name
-        self.invoice_status = "Draft"
+        self.invoice_status = frappe.db.get_value(
+            "Sales Invoice", invoice_name, "status"
+        ) or "Unpaid"
         self.status = "Invoiced"
         self.add_comment(
             "Info",
-            _("Draft Sales Invoice {0} was created automatically on approval.").format(
+            _("Sales Invoice {0} was created and submitted automatically on approval.").format(
                 invoice_name
             ),
         )
@@ -138,7 +140,9 @@ class TicketBooking(Document):
                     "Administrator amended approved booking fields: {0}. Reason: {1}"
                 ).format(", ".join(labels), self.amendment_reason),
             )
-        if getattr(self, "_sync_linked_draft_invoice", False):
+        if getattr(self, "_replace_linked_invoice", None):
+            self.replace_linked_sales_invoice()
+        elif getattr(self, "_sync_linked_draft_invoice", False):
             self.sync_linked_draft_sales_invoice()
 
     def validate_administrator_amendment(self):
@@ -184,30 +188,52 @@ class TicketBooking(Document):
                         self.sales_invoice
                     )
                 )
-            if invoice_status.docstatus != 0:
-                invoice_state = (
-                    _("submitted") if invoice_status.docstatus == 1 else _("cancelled")
-                )
-                frappe.throw(
-                    _(
-                        "Booking fields used by Sales Invoice {0} cannot be changed while that invoice is {1}: {2}. "
-                        "Cancel and amend the submitted invoice under accounting rules first."
-                    ).format(
-                        self.sales_invoice,
-                        invoice_state,
-                        ", ".join(
-                            self.meta.get_label(fieldname) or fieldname
-                            for fieldname in invoice_changes
-                        ),
-                    )
-                )
-            self._sync_linked_draft_invoice = True
+            if invoice_status.docstatus == 0:
+                self._sync_linked_draft_invoice = True
+            else:
+                self._replace_linked_invoice = self.sales_invoice
 
         self.amendment_reason = reason
         self.last_amended_by = frappe.session.user
         self.last_amended_at = now()
         self.amendment_count = (previous.amendment_count or 0) + 1
         self._administrator_amendment_fields = substantive_changes
+
+    def replace_linked_sales_invoice(self):
+        """Replace the linked invoice after an Administrator booking amendment."""
+        previous_invoice_name = self._replace_linked_invoice
+        previous_invoice = frappe.get_doc("Sales Invoice", previous_invoice_name)
+        previous_docstatus = previous_invoice.docstatus
+
+        if previous_invoice.docstatus == 1:
+            from esrm_travel.workflow import cancel_sales_invoice
+
+            cancel_sales_invoice(previous_invoice_name)
+        elif previous_invoice.docstatus == 0:
+            previous_invoice.flags.ignore_permissions = True
+            previous_invoice.delete()
+        else:
+            from esrm_travel.workflow import sync_ticket_booking
+
+            sync_ticket_booking(
+                self.name,
+                sales_invoice_name=previous_invoice_name,
+                clear_sales_invoice=True,
+            )
+
+        new_invoice_name = make_and_submit_sales_invoice(
+            [self.name],
+            amended_from=(
+                previous_invoice_name if previous_docstatus in {1, 2} else None
+            ),
+        )
+        self.sales_invoice = new_invoice_name
+        self.add_comment(
+            "Info",
+            _(
+                "Sales Invoice {0} replaced {1} automatically after the booking amendment."
+            ).format(new_invoice_name, previous_invoice_name),
+        )
 
     def sync_linked_draft_sales_invoice(self):
         invoice = frappe.get_doc("Sales Invoice", self.sales_invoice)
@@ -547,7 +573,7 @@ def make_sales_invoice(source_name):
     if booking.sales_invoice:
         return booking.sales_invoice
 
-    return make_sales_invoice_from_bookings([booking.name])
+    return make_and_submit_sales_invoice([booking.name])
 
 
 @frappe.whitelist()
@@ -798,10 +824,20 @@ def make_group_sales_invoice(bookings):
 
         bookings = json.loads(bookings)
 
-    return make_sales_invoice_from_bookings(bookings)
+    return make_and_submit_sales_invoice(bookings)
 
 
-def make_sales_invoice_from_bookings(booking_names):
+def make_and_submit_sales_invoice(booking_names, amended_from=None):
+    invoice_name = make_sales_invoice_from_bookings(
+        booking_names, amended_from=amended_from
+    )
+    invoice = frappe.get_doc("Sales Invoice", invoice_name)
+    invoice.flags.ignore_permissions = True
+    invoice.submit()
+    return invoice.name
+
+
+def make_sales_invoice_from_bookings(booking_names, amended_from=None):
     if not booking_names:
         frappe.throw(_("Select at least one Ticket Booking."))
 
@@ -839,8 +875,7 @@ def make_sales_invoice_from_bookings(booking_names):
         invoice_items.append(item_row)
         invoice_tickets.append(build_invoice_ticket_row(booking, rate))
 
-    sales_invoice = frappe.get_doc(
-        {
+    invoice_values = {
             "doctype": "Sales Invoice",
             "customer": bookings[0].customer,
             "company": settings.default_company,
@@ -857,7 +892,10 @@ def make_sales_invoice_from_bookings(booking_names):
             "esrm_ticket_bookings": invoice_tickets,
             "remarks": "\n\n".join(build_invoice_description(booking) for booking in bookings),
         }
-    )
+    if amended_from:
+        invoice_values["amended_from"] = amended_from
+
+    sales_invoice = frappe.get_doc(invoice_values)
     sales_invoice.insert(ignore_permissions=True)
 
     for booking in bookings:
