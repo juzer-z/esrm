@@ -93,6 +93,39 @@ class TicketBooking(Document):
         self.set_cost_completion()
         self.calculate_profitability()
 
+    def on_submit(self):
+        self.create_sales_invoice_on_approval()
+
+    def create_sales_invoice_on_approval(self):
+        """Atomically create and link a draft invoice when approval submits the booking."""
+        if self.approval_status != "Approved" or self.sales_invoice:
+            return
+
+        try:
+            invoice_name = make_sales_invoice_from_bookings([self.name])
+        except Exception as exc:
+            frappe.log_error(
+                title=f"Automatic invoice creation failed for {self.name}",
+                message=frappe.get_traceback(),
+            )
+            frappe.throw(
+                _(
+                    "Ticket Booking {0} could not be approved because its Sales Invoice "
+                    "could not be created. Correct the invoice setup or booking values and try again. "
+                    "Reason: {1}"
+                ).format(self.name, str(exc))
+            )
+
+        self.sales_invoice = invoice_name
+        self.invoice_status = "Draft"
+        self.status = "Invoiced"
+        self.add_comment(
+            "Info",
+            _("Draft Sales Invoice {0} was created automatically on approval.").format(
+                invoice_name
+            ),
+        )
+
     def on_update_after_submit(self):
         if getattr(self, "_administrator_amendment_fields", None):
             labels = [
