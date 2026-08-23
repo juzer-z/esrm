@@ -144,6 +144,11 @@ class TicketBooking(Document):
             self.replace_linked_sales_invoice()
         elif getattr(self, "_sync_linked_draft_invoice", False):
             self.sync_linked_draft_sales_invoice()
+        elif (
+            getattr(self, "_administrator_amendment_fields", None)
+            and not self.sales_invoice
+        ):
+            self.create_corrected_invoice_after_unlinked_amendment()
 
     def validate_administrator_amendment(self):
         if self.approval_status != "Approved":
@@ -233,6 +238,36 @@ class TicketBooking(Document):
             _(
                 "Sales Invoice {0} replaced {1} automatically after the booking amendment."
             ).format(new_invoice_name, previous_invoice_name),
+        )
+
+    def create_corrected_invoice_after_unlinked_amendment(self):
+        """Create a submitted correction after the prior invoice was cancelled manually."""
+        previous_invoice_name = frappe.db.sql(
+            """
+            select invoice.name
+            from `tabSales Invoice` invoice
+            inner join `tabESRM Invoice Ticket` ticket
+                on ticket.parent = invoice.name
+                and ticket.parenttype = 'Sales Invoice'
+            where ticket.ticket_booking = %s
+                and invoice.docstatus = 2
+                and ifnull(invoice.is_return, 0) = 0
+            order by invoice.modified desc
+            limit 1
+            """,
+            self.name,
+        )
+        amended_from = previous_invoice_name[0][0] if previous_invoice_name else None
+        new_invoice_name = make_and_submit_sales_invoice(
+            [self.name], amended_from=amended_from
+        )
+        self.sales_invoice = new_invoice_name
+        self.add_comment(
+            "Info",
+            _(
+                "Corrected Sales Invoice {0} was created and submitted automatically "
+                "after the booking amendment."
+            ).format(new_invoice_name),
         )
 
     def sync_linked_draft_sales_invoice(self):
