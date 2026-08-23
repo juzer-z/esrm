@@ -127,6 +127,10 @@ def cancel_sales_invoice(invoice_name):
             clear_sales_invoice=True,
         )
 
+    # The operational back-links above have already been handled deliberately.
+    # Prevent Frappe's generic back-link validator from treating those submitted
+    # source records as accounting documents that must also be cancelled.
+    invoice.flags.ignore_links = True
     invoice.cancel()
     return invoice.name
 
