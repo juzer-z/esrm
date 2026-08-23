@@ -96,6 +96,41 @@ def bulk_submit_sales_invoices(invoice_names):
     return {"submitted": submitted, "failed": failed}
 
 
+@frappe.whitelist()
+def cancel_sales_invoice(invoice_name):
+    """Cancel an invoice without cancelling its approved ESRM service records."""
+    if frappe.session.user != "Administrator":
+        frappe.throw(
+            _("Only Administrator can cancel Sales Invoices."),
+            frappe.PermissionError,
+        )
+
+    invoice = frappe.get_doc("Sales Invoice", invoice_name)
+    if invoice.docstatus != 1:
+        frappe.throw(_("Only a submitted Sales Invoice can be cancelled."))
+
+    # Ticket Booking and Visa Service are operational source records, not
+    # accounting dependants that should be cancelled with their invoice. Clear
+    # their back-links first so Frappe can cancel only the Sales Invoice. The
+    # request transaction rolls these changes back if accounting cancellation
+    # fails for any other reason.
+    for booking_name in get_related_ticket_bookings_from_sales_invoice(invoice):
+        sync_ticket_booking(
+            booking_name,
+            sales_invoice_name=invoice.name,
+            clear_sales_invoice=True,
+        )
+    for service_name in get_related_visa_services_from_sales_invoice(invoice):
+        sync_visa_service(
+            service_name,
+            sales_invoice_name=invoice.name,
+            clear_sales_invoice=True,
+        )
+
+    invoice.cancel()
+    return invoice.name
+
+
 def prepare_invoice_dates_for_submission(invoice):
     """Keep the draft's displayed posting date when submitting it in bulk."""
     if invoice.meta.has_field("set_posting_time"):

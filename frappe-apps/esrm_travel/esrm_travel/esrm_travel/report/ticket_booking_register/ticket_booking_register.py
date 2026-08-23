@@ -189,6 +189,7 @@ def get_summary(data):
     return [
         {"label": _("Tickets"), "value": tickets, "datatype": "Int", "indicator": "Blue"},
         {"label": _("Visa Services"), "value": visas, "datatype": "Int", "indicator": "Purple"},
+        {"label": _("IATA Amount"), "value": sum(row.iata_amount or 0 for row in data), "datatype": "Currency", "indicator": "Blue"},
         {"label": _("Invoice Amount"), "value": sum(row.invoice_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Collected"), "value": sum(row.paid_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Outstanding"), "value": sum(row.outstanding_amount or 0 for row in data), "datatype": "Currency", "indicator": "Orange"},

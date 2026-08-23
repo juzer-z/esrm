@@ -20,7 +20,25 @@ frappe.ui.form.on("Sales Invoice", {
                         __("Cancel Sales Invoice {0}? This will reverse its accounting entries.", [
                             frm.doc.name,
                         ]),
-                        () => frm.savecancel()
+                        () => {
+                            frappe.call({
+                                method: "esrm_travel.workflow.cancel_sales_invoice",
+                                args: { invoice_name: frm.doc.name },
+                                freeze: true,
+                                freeze_message: __("Cancelling Sales Invoice..."),
+                                callback: (r) => {
+                                    if (!r.exc) {
+                                        frappe.show_alert({
+                                            message: __("Sales Invoice {0} cancelled.", [
+                                                frm.doc.name,
+                                            ]),
+                                            indicator: "green",
+                                        });
+                                        frm.reload_doc();
+                                    }
+                                },
+                            });
+                        }
                     );
                 },
                 __("Actions")
