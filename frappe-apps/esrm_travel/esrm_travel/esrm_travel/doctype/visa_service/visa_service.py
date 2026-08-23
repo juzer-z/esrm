@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import add_days, add_months, flt, getdate, nowdate
+from frappe.utils import add_days, add_months, flt, getdate, now, nowdate
 
 
 PACKAGE_FIELDS = (
@@ -32,11 +32,13 @@ INVOICE_BOUND_FIELDS = {
     "purpose",
     "applicant_name",
     "passport_number",
+    "service_package",
     "destination_country",
     "visa_category",
     "visa_type",
     "processing_type",
     "number_of_entries",
+    "intended_travel_date",
     "currency",
     "government_fee",
     "service_charge",
@@ -114,6 +116,60 @@ class VisaService(Document):
         self.calculate_amounts()
         self.update_document_audit()
         self.validate_stage_requirements()
+
+    def on_submit(self):
+        self.create_sales_invoice_on_approval()
+
+    def create_sales_invoice_on_approval(self):
+        """Atomically create, submit, and link the invoice on visa approval."""
+        if self.approval_status != "Approved" or self.sales_invoice:
+            return
+        try:
+            invoice_name = make_and_submit_sales_invoice([self.name])
+        except Exception as exc:
+            frappe.log_error(
+                title=f"Automatic visa invoice creation failed for {self.name}",
+                message=frappe.get_traceback(),
+            )
+            frappe.throw(
+                _(
+                    "Visa Service {0} could not be approved because its Sales Invoice "
+                    "could not be created. Correct the invoice setup or service values and try again. "
+                    "Reason: {1}"
+                ).format(self.name, str(exc))
+            )
+        self.sales_invoice = invoice_name
+        self.invoice_status = frappe.db.get_value(
+            "Sales Invoice", invoice_name, "status"
+        ) or "Unpaid"
+        self.status = "Invoiced"
+        self.add_comment(
+            "Info",
+            _("Sales Invoice {0} was created and submitted automatically on approval.").format(
+                invoice_name
+            ),
+        )
+
+    def on_update_after_submit(self):
+        if getattr(self, "_replace_linked_invoice", None):
+            self.replace_linked_sales_invoice()
+        elif (
+            getattr(self, "_invoice_amendment_fields", None)
+            and not self.sales_invoice
+        ):
+            self.create_corrected_invoice_after_unlinked_amendment()
+
+        if getattr(self, "_invoice_amendment_fields", None):
+            labels = [
+                self.meta.get_label(fieldname) or fieldname
+                for fieldname in self._invoice_amendment_fields
+            ]
+            self.add_comment(
+                "Edit",
+                _("Administrator amended visa invoice fields: {0}. Reason: {1}").format(
+                    ", ".join(labels), self.amendment_reason
+                ),
+            )
 
     def apply_service_package(self):
         package = frappe.get_doc("Visa Service Package", self.service_package)
@@ -283,15 +339,87 @@ class VisaService(Document):
             and self.has_value_changed(field.fieldname)
         }
         invoice_changes = changed & INVOICE_BOUND_FIELDS
-        if self.sales_invoice and invoice_changes:
-            invoice_docstatus = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
-            if invoice_docstatus == 1:
-                frappe.throw(
-                    _("Fields used by submitted Sales Invoice {0} cannot be changed: {1}.").format(
-                        self.sales_invoice,
-                        ", ".join(self.meta.get_label(fieldname) or fieldname for fieldname in sorted(invoice_changes)),
-                    )
-                )
+        if not invoice_changes:
+            return
+        if frappe.session.user != "Administrator":
+            frappe.throw(
+                _("Only Administrator can amend fields used by a Visa Service invoice."),
+                frappe.PermissionError,
+            )
+
+        reason = (self.amendment_reason or "").strip()
+        if not reason or not self.has_value_changed("amendment_reason"):
+            frappe.throw(_("Enter a new Amendment Reason before saving invoice changes."))
+
+        self.amendment_reason = reason
+        self.last_amended_by = frappe.session.user
+        self.last_amended_at = now()
+        self.amendment_count = (previous.amendment_count or 0) + 1
+        self._invoice_amendment_fields = sorted(invoice_changes)
+        if self.sales_invoice:
+            self._replace_linked_invoice = self.sales_invoice
+
+    def replace_linked_sales_invoice(self):
+        previous_invoice_name = self._replace_linked_invoice
+        previous_invoice = frappe.get_doc("Sales Invoice", previous_invoice_name)
+        previous_docstatus = previous_invoice.docstatus
+        if previous_docstatus == 1:
+            from esrm_travel.workflow import cancel_sales_invoice
+
+            cancel_sales_invoice(previous_invoice_name)
+        elif previous_docstatus == 0:
+            previous_invoice.flags.ignore_permissions = True
+            previous_invoice.delete()
+        else:
+            from esrm_travel.workflow import sync_visa_service
+
+            sync_visa_service(
+                self.name,
+                sales_invoice_name=previous_invoice_name,
+                clear_sales_invoice=True,
+            )
+
+        new_invoice_name = make_and_submit_sales_invoice(
+            [self.name],
+            amended_from=(
+                previous_invoice_name if previous_docstatus in {1, 2} else None
+            ),
+        )
+        self.sales_invoice = new_invoice_name
+        self.add_comment(
+            "Info",
+            _("Sales Invoice {0} replaced {1} automatically after the Visa Service amendment.").format(
+                new_invoice_name, previous_invoice_name
+            ),
+        )
+
+    def create_corrected_invoice_after_unlinked_amendment(self):
+        previous_invoice_name = frappe.db.sql(
+            """
+            select invoice.name
+            from `tabSales Invoice` invoice
+            inner join `tabESRM Invoice Visa Service` detail
+                on detail.parent = invoice.name
+                and detail.parenttype = 'Sales Invoice'
+            where detail.visa_service = %s
+                and invoice.docstatus = 2
+                and ifnull(invoice.is_return, 0) = 0
+            order by invoice.modified desc
+            limit 1
+            """,
+            self.name,
+        )
+        amended_from = previous_invoice_name[0][0] if previous_invoice_name else None
+        new_invoice_name = make_and_submit_sales_invoice(
+            [self.name], amended_from=amended_from
+        )
+        self.sales_invoice = new_invoice_name
+        self.add_comment(
+            "Info",
+            _("Corrected Sales Invoice {0} was created and submitted automatically after the Visa Service amendment.").format(
+                new_invoice_name
+            ),
+        )
 
     def sync_invoice_details(self):
         if not self.sales_invoice:
@@ -392,17 +520,30 @@ def get_package_defaults(package_name):
 
 @frappe.whitelist()
 def make_sales_invoice(source_name):
-    return make_sales_invoice_from_services([source_name])
+    service = frappe.get_doc("Visa Service", source_name)
+    if service.sales_invoice:
+        return service.sales_invoice
+    return make_and_submit_sales_invoice([source_name])
 
 
 @frappe.whitelist()
 def make_group_sales_invoice(services):
     if isinstance(services, str):
         services = frappe.parse_json(services)
-    return make_sales_invoice_from_services(services)
+    return make_and_submit_sales_invoice(services)
 
 
-def make_sales_invoice_from_services(service_names):
+def make_and_submit_sales_invoice(service_names, amended_from=None):
+    invoice_name = make_sales_invoice_from_services(
+        service_names, amended_from=amended_from
+    )
+    invoice = frappe.get_doc("Sales Invoice", invoice_name)
+    invoice.flags.ignore_permissions = True
+    invoice.submit()
+    return invoice.name
+
+
+def make_sales_invoice_from_services(service_names, amended_from=None):
     if not service_names:
         frappe.throw(_("Select at least one Visa Service."))
     services = [frappe.get_doc("Visa Service", name) for name in service_names]
@@ -448,25 +589,26 @@ def make_sales_invoice_from_services(service_names):
         items.append(item)
         detail_rows.append(build_invoice_row(service))
 
-    invoice = frappe.get_doc(
-        {
-            "doctype": "Sales Invoice",
-            "customer": customer,
-            "company": settings.default_company,
-            "currency": company_currency,
-            "conversion_rate": 1,
-            "selling_price_list": price_list,
-            "price_list_currency": company_currency,
-            "plc_conversion_rate": 1,
-            "posting_date": nowdate(),
-            "due_date": nowdate(),
-            "esrm_invoice_number": services[0].invoice_number,
-            "esrm_visa_service": services[0].name,
-            "esrm_visa_services": detail_rows,
-            "items": items,
-            "remarks": "\n\n".join(build_invoice_description(service) for service in services),
-        }
-    )
+    invoice_values = {
+        "doctype": "Sales Invoice",
+        "customer": customer,
+        "company": settings.default_company,
+        "currency": company_currency,
+        "conversion_rate": 1,
+        "selling_price_list": price_list,
+        "price_list_currency": company_currency,
+        "plc_conversion_rate": 1,
+        "posting_date": nowdate(),
+        "due_date": nowdate(),
+        "esrm_invoice_number": services[0].invoice_number,
+        "esrm_visa_service": services[0].name,
+        "esrm_visa_services": detail_rows,
+        "items": items,
+        "remarks": "\n\n".join(build_invoice_description(service) for service in services),
+    }
+    if amended_from:
+        invoice_values["amended_from"] = amended_from
+    invoice = frappe.get_doc(invoice_values)
     invoice.insert(ignore_permissions=True)
     for service in services:
         frappe.db.set_value(
