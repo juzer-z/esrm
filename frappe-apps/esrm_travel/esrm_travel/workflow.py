@@ -114,13 +114,16 @@ def cancel_sales_invoice(invoice_name):
     # their back-links first so Frappe can cancel only the Sales Invoice. The
     # request transaction rolls these changes back if accounting cancellation
     # fails for any other reason.
-    for booking_name in get_related_ticket_bookings_from_sales_invoice(invoice):
+    booking_names = get_related_ticket_bookings_from_sales_invoice(invoice)
+    service_names = get_related_visa_services_from_sales_invoice(invoice)
+
+    for booking_name in booking_names:
         sync_ticket_booking(
             booking_name,
             sales_invoice_name=invoice.name,
             clear_sales_invoice=True,
         )
-    for service_name in get_related_visa_services_from_sales_invoice(invoice):
+    for service_name in service_names:
         sync_visa_service(
             service_name,
             sales_invoice_name=invoice.name,
@@ -132,6 +135,22 @@ def cancel_sales_invoice(invoice_name):
     # source records as accounting documents that must also be cancelled.
     invoice.flags.ignore_links = True
     invoice.cancel()
+
+    # Cancellation hooks and framework link processing can refresh cached source
+    # documents. Re-apply the intended final state so both the status and the
+    # back-link are consistent after cancellation.
+    for booking_name in booking_names:
+        sync_ticket_booking(
+            booking_name,
+            sales_invoice_name=invoice.name,
+            clear_sales_invoice=True,
+        )
+    for service_name in service_names:
+        sync_visa_service(
+            service_name,
+            sales_invoice_name=invoice.name,
+            clear_sales_invoice=True,
+        )
     return invoice.name
 
 
