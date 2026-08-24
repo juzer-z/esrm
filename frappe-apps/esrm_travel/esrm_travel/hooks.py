@@ -54,6 +54,8 @@ fixtures = [
                     "Sales Invoice-esrm_visa_services",
                     "Sales Invoice-esrm_applicant_names",
                     "Payment Entry-esrm_ticket_booking",
+                    "Employee-custom_national_id",
+                    "Employee-custom_tin_number",
                 ],
             ]
         ],

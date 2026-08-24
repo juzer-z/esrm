@@ -104,5 +104,25 @@
     "label": "Ticket Booking",
     "name": "Payment Entry-esrm_ticket_booking",
     "options": "Ticket Booking"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Employee",
+    "fieldname": "custom_national_id",
+    "fieldtype": "Data",
+    "insert_after": "passport_number",
+    "label": "National ID",
+    "name": "Employee-custom_national_id",
+    "no_copy": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Employee",
+    "fieldname": "custom_tin_number",
+    "fieldtype": "Data",
+    "insert_after": "custom_national_id",
+    "label": "TIN Number",
+    "name": "Employee-custom_tin_number",
+    "no_copy": 1
   }
 ]
