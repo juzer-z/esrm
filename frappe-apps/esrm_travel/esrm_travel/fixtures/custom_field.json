@@ -75,6 +75,40 @@
   {
     "doctype": "Custom Field",
     "dt": "Sales Invoice",
+    "fieldname": "esrm_general_service_order",
+    "fieldtype": "Link",
+    "insert_after": "esrm_applicant_names",
+    "label": "General Service Order",
+    "name": "Sales Invoice-esrm_general_service_order",
+    "options": "General Service Order",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "esrm_general_services",
+    "fieldtype": "Table",
+    "insert_after": "esrm_general_service_order",
+    "label": "ESRM General Services",
+    "name": "Sales Invoice-esrm_general_services",
+    "options": "ESRM Invoice General Service",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
+    "fieldname": "esrm_service_subjects",
+    "fieldtype": "Small Text",
+    "in_global_search": 1,
+    "in_standard_filter": 1,
+    "insert_after": "esrm_general_services",
+    "label": "Service Subject",
+    "name": "Sales Invoice-esrm_service_subjects",
+    "read_only": 1
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "Sales Invoice",
     "fieldname": "esrm_passenger_names",
     "fieldtype": "Small Text",
     "in_global_search": 1,

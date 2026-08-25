@@ -1,0 +1,11 @@
+{
+ "actions":[],"doctype":"DocType","editable_grid":1,"engine":"InnoDB","istable":1,"module":"ESRM Travel","name":"General Service Attribute",
+ "field_order":["label","value","valid_from","valid_until","remarks"],
+ "fields":[
+  {"fieldname":"label","fieldtype":"Data","label":"Label","reqd":1,"in_list_view":1},
+  {"fieldname":"value","fieldtype":"Data","label":"Value","reqd":1,"in_list_view":1},
+  {"fieldname":"valid_from","fieldtype":"Date","label":"Valid From"},
+  {"fieldname":"valid_until","fieldtype":"Date","label":"Valid Until"},
+  {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"}
+ ]
+}

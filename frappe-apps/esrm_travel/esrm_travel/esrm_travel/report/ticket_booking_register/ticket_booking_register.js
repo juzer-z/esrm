@@ -4,7 +4,7 @@ frappe.query_reports["Ticket Booking Register"] = {
             fieldname: "service_type",
             label: __("Service Type"),
             fieldtype: "Select",
-            options: "\nTicket\nVisa",
+            options: "\nTicket\nVisa\nGeneral Service",
         },
         {
             fieldname: "search",

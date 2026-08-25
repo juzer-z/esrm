@@ -1,0 +1,15 @@
+{
+ "actions": [], "allow_import": 1, "autoname": "field:profile_name", "doctype": "DocType", "engine": "InnoDB",
+ "field_order": ["profile_name", "profile_type", "active", "description"],
+ "fields": [
+  {"fieldname":"profile_name","fieldtype":"Data","label":"Profile Name","reqd":1,"unique":1,"in_list_view":1},
+  {"fieldname":"profile_type","fieldtype":"Select","label":"Profile Type","options":"Standard Service\nGovernment Fee Only\nFixed Recurring Service\nPercentage Commission\nCustom Line Items","reqd":1,"in_list_view":1},
+  {"default":"1","fieldname":"active","fieldtype":"Check","label":"Active","in_list_view":1},
+  {"fieldname":"description","fieldtype":"Small Text","label":"Description"}
+ ],
+ "module":"ESRM Travel","name":"Service Calculation Profile","permissions":[
+  {"role":"System Manager","create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"write":1},
+  {"role":"ESRM Approver","create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"write":1},
+  {"role":"ESRM Agent","read":1,"report":1}
+ ], "title_field":"profile_name", "track_changes":1
+}

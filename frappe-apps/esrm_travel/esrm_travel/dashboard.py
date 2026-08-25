@@ -14,6 +14,7 @@ def setup_workspace():
     apply_branding()
     setup_chart_of_accounts()
     setup_hrms()
+    setup_general_service_defaults()
     setup_print_formats()
     backfill_sales_invoice_passenger_names()
     ensure_fiscal_years()
@@ -53,6 +54,21 @@ def ensure_fiscal_years():
         save_doc(fiscal_year)
 
     frappe.cache().hdel("fiscal_years", company)
+
+
+def setup_general_service_defaults():
+    if not frappe.db.exists("DocType", "Service Calculation Profile"):
+        return
+    descriptions = {
+        "Standard Service": "Service and reimbursable charges entered as separate invoice lines.",
+        "Government Fee Only": "Government or statutory fee billing without a service fee.",
+        "Fixed Recurring Service": "Fixed amount for a defined recurring billing period.",
+        "Percentage Commission": "Commission calculated as a percentage of a selected basis.",
+        "Custom Line Items": "Open charge lines for mixed or exceptional service billing.",
+    }
+    for profile_type, description in descriptions.items():
+        if not frappe.db.exists("Service Calculation Profile", profile_type):
+            frappe.get_doc({"doctype":"Service Calculation Profile","profile_name":profile_type,"profile_type":profile_type,"active":1,"description":description}).insert(ignore_permissions=True)
 
 
 def get_required_fiscal_years():
@@ -182,6 +198,8 @@ def ensure_accounting_defaults():
         settings.domestic_income_account = domestic_income_account
     if frappe.db.exists("Account", default_income_account):
         settings.international_income_account = default_income_account
+        if not settings.general_service_income_account:
+            settings.general_service_income_account = default_income_account
 
     if (
         settings.has_value_changed("default_company")
@@ -190,6 +208,7 @@ def ensure_accounting_defaults():
         or settings.has_value_changed("default_income_account")
         or settings.has_value_changed("domestic_income_account")
         or settings.has_value_changed("international_income_account")
+        or settings.has_value_changed("general_service_income_account")
     ):
         settings.flags.ignore_mandatory = True
         settings.save(ignore_permissions=True)
@@ -431,6 +450,8 @@ SHORTCUTS = [
     {"type": "DocType", "link_to": "Ticket Booking", "doc_view": "List", "label": "Find Booking", "color": "#364fc7"},
     {"type": "DocType", "link_to": "Visa Service", "doc_view": "New", "label": "New Visa Service", "color": "#087f5b"},
     {"type": "DocType", "link_to": "Visa Service", "doc_view": "List", "label": "Find Visa Service", "color": "#5f3dc4"},
+    {"type": "DocType", "link_to": "General Service Order", "doc_view": "New", "label": "New General Service", "color": "#d9480f"},
+    {"type": "DocType", "link_to": "General Service Order", "doc_view": "List", "label": "Find General Service", "color": "#e67700"},
     {"type": "Report", "link_to": "Pending Ticket Approvals", "label": "Pending Approvals", "color": "#f08c00"},
     {"type": "Report", "link_to": "Ticket Booking Register", "label": "Search Register", "color": "#2f9e44"},
     {"type": "DocType", "link_to": "Customer", "doc_view": "List", "label": "Customers", "color": "#495057"},
@@ -446,6 +467,8 @@ LINKS = [
     {"type": "Link", "label": "Ticket Sector", "link_type": "DocType", "link_to": "Ticket Sector"},
     {"type": "Link", "label": "Visa Service", "link_type": "DocType", "link_to": "Visa Service"},
     {"type": "Link", "label": "Visa Service Package", "link_type": "DocType", "link_to": "Visa Service Package"},
+    {"type": "Link", "label": "General Service Order", "link_type": "DocType", "link_to": "General Service Order"},
+    {"type": "Link", "label": "Service Offering", "link_type": "DocType", "link_to": "Service Offering"},
     {"type": "Card Break", "label": "Billing & Collection", "icon": "accounting", "description": "Create invoices from approved tickets and follow up on outstanding balances."},
     {"type": "Link", "label": "Sales Invoice", "link_type": "DocType", "link_to": "Sales Invoice"},
     {"type": "Link", "label": "Payment Entry", "link_type": "DocType", "link_to": "Payment Entry"},
@@ -455,6 +478,7 @@ LINKS = [
     {"type": "Link", "label": "Pending Ticket Approvals", "link_type": "Report", "link_to": "Pending Ticket Approvals", "is_query_report": 1, "report_ref_doctype": "Ticket Booking"},
     {"type": "Card Break", "label": "Setup", "icon": "setting", "description": "Configure defaults before billing or using finance flows."},
     {"type": "Link", "label": "ESRM Settings", "link_type": "DocType", "link_to": "ESRM Travel Settings"},
+    {"type": "Link", "label": "Calculation Profiles", "link_type": "DocType", "link_to": "Service Calculation Profile"},
 ]
 
 
@@ -472,6 +496,8 @@ def get_workspace_content():
         shortcut("Find Booking", 3),
         shortcut("New Visa Service", 3),
         shortcut("Find Visa Service", 3),
+        shortcut("New General Service", 3),
+        shortcut("Find General Service", 3),
         shortcut("Pending Approvals", 3),
         shortcut("Search Register", 3),
         shortcut("Customers", 3),

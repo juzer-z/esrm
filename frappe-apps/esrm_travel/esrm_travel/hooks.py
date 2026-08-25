@@ -34,7 +34,7 @@ fixtures = [
     {"dt": "Role", "filters": [["name", "in", ["Ticketing Agent", "Ticketing Manager", "ESRM Agent", "ESRM Approver"]]]},
     {"dt": "Workflow State", "filters": [["name", "in", ["Draft", "Pending Approval"]]]},
     {"dt": "Workflow Action Master", "filters": [["name", "in", ["Send for Approval"]]]},
-    {"dt": "Workflow", "filters": [["name", "in", ["Ticket Booking Approval", "Visa Service Approval"]]]},
+    {"dt": "Workflow", "filters": [["name", "in", ["Ticket Booking Approval", "Visa Service Approval", "General Service Order Approval"]]]},
     {"dt": "Fiscal Year", "filters": [["name", "in", ["2026-2027"]]]},
     {"dt": "Custom DocPerm", "filters": [["role", "=", "ESRM Agent"]]},
     {
@@ -53,6 +53,9 @@ fixtures = [
                     "Sales Invoice-esrm_visa_service",
                     "Sales Invoice-esrm_visa_services",
                     "Sales Invoice-esrm_applicant_names",
+                    "Sales Invoice-esrm_general_service_order",
+                    "Sales Invoice-esrm_general_services",
+                    "Sales Invoice-esrm_service_subjects",
                     "Payment Entry-esrm_ticket_booking",
                     "Employee-custom_national_id",
                     "Employee-custom_tin_number",
@@ -71,6 +74,9 @@ doc_events = {
         "on_update_after_submit": "esrm_travel.approval_notifications.notify_ticket_cost_entered",
     },
     "Visa Service": {
+        "on_update": "esrm_travel.approval_notifications.notify_service_approval",
+    },
+    "General Service Order": {
         "on_update": "esrm_travel.approval_notifications.notify_service_approval",
     },
     "Sales Invoice": {

@@ -54,6 +54,8 @@ def get_data(filters):
         rows.extend(get_ticket_rows(filters))
     if service_type in (None, "", "Visa"):
         rows.extend(get_visa_rows(filters))
+    if service_type in (None, "", "General Service"):
+        rows.extend(get_general_service_rows(filters))
     return sorted(rows, key=lambda row: (row.entry_date or "", row.modified or ""), reverse=True)
 
 
@@ -166,10 +168,40 @@ def get_common_conditions(filters, alias, entry_date_field, travel_date_field, o
     return conditions, values
 
 
+def get_general_service_rows(filters):
+    conditions, values = get_common_conditions(filters, "gso", "entry_date", "entry_date", "service_owner")
+    if filters.get("airline") or filters.get("payment_mode") or filters.get("destination_country"):
+        return []
+    if filters.get("search"):
+        conditions.append("(gso.name like %(search)s or gso.invoice_number like %(search)s or gso.customer like %(search)s or gso.subject like %(search)s or gso.reference like %(search)s or gso.service_offering like %(search)s)")
+        values["search"] = f"%{filters.search}%"
+    return frappe.db.sql(
+        f"""
+        select
+            'General Service' as service_type, 'General Service Order' as service_doctype,
+            gso.name, gso.entry_date, gso.entry_date as travel_date, gso.customer,
+            gso.subject as traveller_name, gso.reference, '' as airline,
+            gso.client_reference as document_number, '' as route_summary,
+            '' as destination_country, gso.service_offering as visa_service,
+            gso.invoice_number, gso.service_owner, gso.approval_status, gso.status,
+            gso.invoice_status, '' as payment_mode, gso.invoice_amount as gross_amount,
+            0 as government_fee, gso.revenue_amount as service_charge, 0 as other_charges,
+            0 as iata_amount, gso.total_cost as supplier_cost, gso.invoice_amount,
+            0 as commission, 0 as discount, gso.profit,
+            greatest(ifnull(si.grand_total, 0) - ifnull(si.outstanding_amount, 0), 0) as paid_amount,
+            ifnull(si.outstanding_amount, gso.invoice_amount) as outstanding_amount,
+            gso.sales_invoice, gso.modified
+        from `tabGeneral Service Order` gso
+        left join `tabSales Invoice` si on si.name = gso.sales_invoice
+        where {" and ".join(conditions) if conditions else "1=1"}
+        """, values, as_dict=True,
+    )
+
+
 def get_chart(data):
     if not data:
         return None
-    counts = {"Ticket": 0, "Visa": 0}
+    counts = {"Ticket": 0, "Visa": 0, "General Service": 0}
     for row in data:
         counts[row.service_type] = counts.get(row.service_type, 0) + 1
     return {
@@ -186,9 +218,11 @@ def get_summary(data):
         return []
     tickets = sum(row.service_type == "Ticket" for row in data)
     visas = sum(row.service_type == "Visa" for row in data)
+    general_services = sum(row.service_type == "General Service" for row in data)
     return [
         {"label": _("Tickets"), "value": tickets, "datatype": "Int", "indicator": "Blue"},
         {"label": _("Visa Services"), "value": visas, "datatype": "Int", "indicator": "Purple"},
+        {"label": _("General Services"), "value": general_services, "datatype": "Int", "indicator": "Orange"},
         {"label": _("IATA Amount"), "value": sum(row.iata_amount or 0 for row in data), "datatype": "Currency", "indicator": "Blue"},
         {"label": _("Invoice Amount"), "value": sum(row.invoice_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Collected"), "value": sum(row.paid_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},

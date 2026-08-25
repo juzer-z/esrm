@@ -14,7 +14,7 @@ PAYMENT_MODE_MAP = {
 
 
 def set_sales_invoice_search_names(doc, method=None):
-    """Keep ticket passengers and visa applicants searchable on invoices."""
+    """Keep ESRM operational names searchable on invoices."""
     passenger_names = []
     for row in doc.get("esrm_ticket_bookings") or []:
         passenger_name = (row.passenger_name or "").strip()
@@ -28,6 +28,13 @@ def set_sales_invoice_search_names(doc, method=None):
         if applicant_name and applicant_name not in applicant_names:
             applicant_names.append(applicant_name)
     doc.esrm_applicant_names = "\n".join(applicant_names)
+    subjects = []
+    for row in doc.get("esrm_general_services") or []:
+        subject = (row.subject or "").strip()
+        if subject and subject not in subjects:
+            subjects.append(subject)
+    if doc.meta.has_field("esrm_service_subjects"):
+        doc.esrm_service_subjects = "\n".join(subjects)
 
 
 set_sales_invoice_passenger_names = set_sales_invoice_search_names
@@ -116,6 +123,7 @@ def cancel_sales_invoice(invoice_name):
     # fails for any other reason.
     booking_names = get_related_ticket_bookings_from_sales_invoice(invoice)
     service_names = get_related_visa_services_from_sales_invoice(invoice)
+    general_order_names = get_related_general_service_orders_from_sales_invoice(invoice)
 
     for booking_name in booking_names:
         sync_ticket_booking(
@@ -129,6 +137,8 @@ def cancel_sales_invoice(invoice_name):
             sales_invoice_name=invoice.name,
             clear_sales_invoice=True,
         )
+    for order_name in general_order_names:
+        sync_general_service_order(order_name, sales_invoice_name=invoice.name, clear_sales_invoice=True)
 
     # The operational back-links above have already been handled deliberately.
     # Prevent Frappe's generic back-link validator from treating those submitted
@@ -151,6 +161,8 @@ def cancel_sales_invoice(invoice_name):
             sales_invoice_name=invoice.name,
             clear_sales_invoice=True,
         )
+    for order_name in general_order_names:
+        sync_general_service_order(order_name, sales_invoice_name=invoice.name, clear_sales_invoice=True)
     return invoice.name
 
 
@@ -199,6 +211,8 @@ def on_submit_sales_invoice(doc, method=None):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
     for service_name in get_related_visa_services_from_sales_invoice(doc):
         sync_visa_service(service_name, sales_invoice_name=doc.name)
+    for order_name in get_related_general_service_orders_from_sales_invoice(doc):
+        sync_general_service_order(order_name, sales_invoice_name=doc.name)
 
 
 def on_update_after_submit_sales_invoice(doc, method=None):
@@ -209,6 +223,8 @@ def on_update_after_submit_sales_invoice(doc, method=None):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name)
     for service_name in get_related_visa_services_from_sales_invoice(doc):
         sync_visa_service(service_name, sales_invoice_name=doc.name)
+    for order_name in get_related_general_service_orders_from_sales_invoice(doc):
+        sync_general_service_order(order_name, sales_invoice_name=doc.name)
 
 
 def on_cancel_sales_invoice(doc, method=None):
@@ -219,6 +235,8 @@ def on_cancel_sales_invoice(doc, method=None):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
     for service_name in get_related_visa_services_from_sales_invoice(doc):
         sync_visa_service(service_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
+    for order_name in get_related_general_service_orders_from_sales_invoice(doc):
+        sync_general_service_order(order_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 
 
 def sync_submitted_credit_note(doc):
@@ -272,6 +290,8 @@ def after_delete_sales_invoice(doc, method=None):
         sync_ticket_booking(booking_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
     for service_name in get_related_visa_services_from_sales_invoice(doc):
         sync_visa_service(service_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
+    for order_name in get_related_general_service_orders_from_sales_invoice(doc):
+        sync_general_service_order(order_name, sales_invoice_name=doc.name, clear_sales_invoice=True)
 
 
 def on_submit_payment_entry(doc, method=None):
@@ -279,6 +299,8 @@ def on_submit_payment_entry(doc, method=None):
         sync_ticket_booking(booking_name)
     for service_name in get_related_visa_services_from_payment_entry(doc):
         sync_visa_service(service_name)
+    for order_name in get_related_general_service_orders_from_payment_entry(doc):
+        sync_general_service_order(order_name)
 
 
 def on_update_after_submit_payment_entry(doc, method=None):
@@ -286,6 +308,8 @@ def on_update_after_submit_payment_entry(doc, method=None):
         sync_ticket_booking(booking_name)
     for service_name in get_related_visa_services_from_payment_entry(doc):
         sync_visa_service(service_name)
+    for order_name in get_related_general_service_orders_from_payment_entry(doc):
+        sync_general_service_order(order_name)
 
 
 def on_cancel_payment_entry(doc, method=None):
@@ -293,6 +317,8 @@ def on_cancel_payment_entry(doc, method=None):
         sync_ticket_booking(booking_name)
     for service_name in get_related_visa_services_from_payment_entry(doc):
         sync_visa_service(service_name)
+    for order_name in get_related_general_service_orders_from_payment_entry(doc):
+        sync_general_service_order(order_name)
 
 
 def get_related_ticket_bookings_from_payment_entry(doc):
@@ -341,6 +367,39 @@ def get_related_visa_services_from_payment_entry(doc):
         invoice = frappe.get_doc("Sales Invoice", row.reference_name)
         service_names.update(get_related_visa_services_from_sales_invoice(invoice))
     return service_names
+
+
+def get_related_general_service_orders_from_sales_invoice(doc):
+    order_names = set()
+    if getattr(doc, "esrm_general_service_order", None):
+        order_names.add(doc.esrm_general_service_order)
+    for row in doc.get("esrm_general_services", []):
+        if row.general_service_order:
+            order_names.add(row.general_service_order)
+    return order_names
+
+
+def get_related_general_service_orders_from_payment_entry(doc):
+    order_names = set()
+    for row in doc.get("references", []):
+        if row.reference_doctype == "Sales Invoice" and row.reference_name:
+            order_names.update(get_related_general_service_orders_from_sales_invoice(frappe.get_doc("Sales Invoice", row.reference_name)))
+    return order_names
+
+
+def sync_general_service_order(order_name, sales_invoice_name=None, clear_sales_invoice=False):
+    if not order_name or not frappe.db.exists("General Service Order", order_name):
+        return
+    order = frappe.get_doc("General Service Order", order_name)
+    if clear_sales_invoice and order.sales_invoice == sales_invoice_name:
+        order.sales_invoice = None
+        order.invoice_status = "Not Invoiced"
+    elif sales_invoice_name and not order.sales_invoice:
+        order.sales_invoice = sales_invoice_name
+    if not clear_sales_invoice:
+        order.sync_invoice_details()
+    order.set_status()
+    frappe.db.set_value("General Service Order", order.name, {"sales_invoice":order.sales_invoice,"invoice_status":order.invoice_status,"status":order.status}, update_modified=True)
 
 
 def get_company_payment_account(company, mode_of_payment, company_account_field):

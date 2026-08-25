@@ -1,0 +1,13 @@
+{
+ "actions":[],"doctype":"DocType","editable_grid":1,"engine":"InnoDB","istable":1,"module":"ESRM Travel","name":"General Service Applicant",
+ "field_order":["applicant_name","nationality","passport_number","permit_reference","issue_date","expiry_date","remarks"],
+ "fields":[
+  {"fieldname":"applicant_name","fieldtype":"Data","label":"Applicant Name","reqd":1,"in_list_view":1},
+  {"default":"Bangladesh","fieldname":"nationality","fieldtype":"Link","label":"Nationality","options":"Country","in_list_view":1},
+  {"fieldname":"passport_number","fieldtype":"Data","label":"Passport Number","in_list_view":1},
+  {"fieldname":"permit_reference","fieldtype":"Data","label":"Permit / Reference","in_list_view":1},
+  {"fieldname":"issue_date","fieldtype":"Date","label":"Issue Date"},
+  {"fieldname":"expiry_date","fieldtype":"Date","label":"Expiry Date"},
+  {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"}
+ ]
+}

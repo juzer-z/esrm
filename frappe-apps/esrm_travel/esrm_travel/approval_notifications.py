@@ -94,6 +94,9 @@ def _get_message(doc, state):
     if doc.doctype == "Visa Service":
         subject_name = doc.applicant_name or doc.name
         label = _("Visa Service")
+    elif doc.doctype == "General Service Order":
+        subject_name = doc.subject or doc.name
+        label = _("General Service Order")
     else:
         subject_name = doc.passenger_name or doc.name
         label = _("Ticket Booking")

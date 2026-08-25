@@ -1,0 +1,37 @@
+{
+ "actions": [], "allow_import": 1, "autoname":"field:offering_name", "doctype":"DocType", "engine":"InnoDB",
+ "field_order":["offering_name","service_code","service_family","calculation_profile","active","defaults_section","default_description","default_unit","default_service_charge","default_government_fee","default_cost","tax_section","vat_applicable","vat_rate","ait_applicable","ait_rate","ait_treatment","commission_basis","commission_percentage","requirements_section","annexure_type","applicant_details_required","billing_period_required","po_required","recurring_allowed","required_documents"],
+ "fields":[
+  {"fieldname":"offering_name","fieldtype":"Data","label":"Offering Name","reqd":1,"unique":1,"in_list_view":1,"in_global_search":1},
+  {"fieldname":"service_code","fieldtype":"Data","label":"Service Code","reqd":1,"unique":1,"in_list_view":1},
+  {"fieldname":"service_family","fieldtype":"Select","label":"Service Family","options":"Immigration & Expatriate\nCorporate Licensing & Compliance\nRecurring Service\nOutsourced Payroll\nOther","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"calculation_profile","fieldtype":"Link","label":"Calculation Profile","options":"Service Calculation Profile","reqd":1,"in_list_view":1},
+  {"default":"1","fieldname":"active","fieldtype":"Check","label":"Active","in_list_view":1},
+  {"fieldname":"defaults_section","fieldtype":"Section Break","label":"Pricing Defaults"},
+  {"fieldname":"default_description","fieldtype":"Small Text","label":"Default Description"},
+  {"default":"Service","fieldname":"default_unit","fieldtype":"Data","label":"Default Unit"},
+  {"default":"0","fieldname":"default_service_charge","fieldtype":"Currency","label":"Default Service Charge"},
+  {"default":"0","fieldname":"default_government_fee","fieldtype":"Currency","label":"Default Government Fee"},
+  {"default":"0","fieldname":"default_cost","fieldtype":"Currency","label":"Default Cost"},
+  {"fieldname":"tax_section","fieldtype":"Section Break","label":"Tax and Commission"},
+  {"fieldname":"vat_applicable","fieldtype":"Check","label":"VAT Applicable"},
+  {"default":"0","fieldname":"vat_rate","fieldtype":"Percent","label":"VAT Rate"},
+  {"fieldname":"ait_applicable","fieldtype":"Check","label":"AIT Applicable"},
+  {"default":"0","fieldname":"ait_rate","fieldtype":"Percent","label":"AIT Rate"},
+  {"default":"Not applicable","fieldname":"ait_treatment","fieldtype":"Select","label":"AIT Treatment","options":"Added\nIncluded\nWithheld during payment\nNot applicable"},
+  {"fieldname":"commission_basis","fieldtype":"Select","label":"Commission Basis","options":"\nInvoice Amount\nGovernment Fee\nService Charge\nCustom Basis"},
+  {"default":"0","fieldname":"commission_percentage","fieldtype":"Percent","label":"Commission Percentage"},
+  {"fieldname":"requirements_section","fieldtype":"Section Break","label":"Requirements"},
+  {"default":"None","fieldname":"annexure_type","fieldtype":"Select","label":"Annexure Type","options":"None\nApplicant\nCorporate\nPayroll\nCustom"},
+  {"fieldname":"applicant_details_required","fieldtype":"Check","label":"Applicant Details Required"},
+  {"fieldname":"billing_period_required","fieldtype":"Check","label":"Billing Period Required"},
+  {"fieldname":"po_required","fieldtype":"Check","label":"Purchase Order Required"},
+  {"fieldname":"recurring_allowed","fieldtype":"Check","label":"Recurring Allowed"},
+  {"fieldname":"required_documents","fieldtype":"Small Text","label":"Required Documents"}
+ ],
+ "module":"ESRM Travel","name":"Service Offering","permissions":[
+  {"role":"System Manager","create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"write":1},
+  {"role":"ESRM Approver","create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"write":1},
+  {"role":"ESRM Agent","read":1,"report":1}
+ ], "search_fields":"offering_name,service_code,service_family", "title_field":"offering_name", "track_changes":1
+}

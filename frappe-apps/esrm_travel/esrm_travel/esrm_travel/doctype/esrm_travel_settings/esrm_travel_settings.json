@@ -13,9 +13,11 @@
   "domestic_income_account",
   "international_income_account",
   "visa_income_account",
+  "general_service_income_account",
   "naming_section",
   "ticket_booking_series",
   "visa_service_series",
+  "general_service_order_series",
   "email_notifications_section",
   "email_approval_required",
   "email_approval_decisions",
@@ -92,6 +94,12 @@
    "options": "Account"
   },
   {
+   "fieldname": "general_service_income_account",
+   "fieldtype": "Link",
+   "label": "General Service Income Account",
+   "options": "Account"
+  },
+  {
    "fieldname": "naming_section",
    "fieldtype": "Section Break",
    "label": "Naming"
@@ -107,6 +115,12 @@
    "fieldname": "visa_service_series",
    "fieldtype": "Data",
    "label": "Visa Service Series"
+  },
+  {
+   "default": "GSO-.YYYY.-",
+   "fieldname": "general_service_order_series",
+   "fieldtype": "Data",
+   "label": "General Service Order Series"
   },
   {
    "description": "All notifications remain available in ERPNext. Enable email only for the categories that should also be delivered to each user's email address.",

@@ -238,6 +238,7 @@ ESRM_TICKET_INVOICE_HTML = """
 {% set is_credit_note = doc.is_return and doc.return_against %}
 {% set tickets = doc.esrm_ticket_bookings or [] %}
 {% set visa_services = doc.esrm_visa_services or [] %}
+{% set general_services = doc.esrm_general_services or [] %}
 {% set credit_summary = get_invoice_credit_summary(doc.name) if not is_credit_note else none %}
 {% if credit_summary and credit_summary.tickets %}
     {% set tickets = credit_summary.tickets %}
@@ -272,7 +273,13 @@ ESRM_TICKET_INVOICE_HTML = """
         "remarks": visa.customer_remarks
     }] %}
 {% endif %}
+{% if not general_services and doc.esrm_general_service_order %}
+    {% set general = frappe.get_doc("General Service Order", doc.esrm_general_service_order) %}
+    {% set general_services = [{"general_service_order": general.name, "service_date": general.entry_date, "service_offering": general.service_offering, "subject": general.subject, "description": general.description, "quantity": 1, "amount": general.invoice_amount, "remarks": general.customer_remarks}] %}
+{% endif %}
 {% set is_visa_invoice = true if visa_services else false %}
+{% set is_general_invoice = true if general_services else false %}
+{% set general_order = frappe.get_doc("General Service Order", general_services[0].general_service_order) if is_general_invoice else none %}
 
 <style>
     .esrm-invoice {
@@ -625,15 +632,15 @@ ESRM_TICKET_INVOICE_HTML = """
             </td>
             <td class="esrm-summary">
                 <div class="esrm-summary-block">
-                    <div class="esrm-section-title">{{ "Visa Service Details" if is_visa_invoice else "Booking Details" }}</div>
+                    <div class="esrm-section-title">{{ ("Payroll Service Details" if general_order and general_order.print_profile == "Payroll" else "General Service Details") if is_general_invoice else ("Visa Service Details" if is_visa_invoice else "Booking Details") }}</div>
                     <table class="esrm-summary-table">
                         <tr>
                             <td class="esrm-summary-label">Purpose:</td>
-                            <td>{{ visa_services[0].service_description if is_visa_invoice else (tickets[0].purpose if tickets and tickets[0].purpose else "") }}</td>
+                            <td>{{ general_services[0].subject if is_general_invoice else (visa_services[0].service_description if is_visa_invoice else (tickets[0].purpose if tickets and tickets[0].purpose else "")) }}</td>
                         </tr>
                         <tr>
                             <td class="esrm-summary-label">Reference:</td>
-                            <td>{{ invoice_no.split("-")[0] if is_visa_invoice and invoice_no else (tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else "")) }}</td>
+                            <td>{{ general_order.reference if is_general_invoice else (invoice_no.split("-")[0] if is_visa_invoice and invoice_no else (tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else ""))) }}</td>
                         </tr>
                     </table>
                 </div>
@@ -641,10 +648,25 @@ ESRM_TICKET_INVOICE_HTML = """
         </tr>
     </table>
 
-    <div class="esrm-intro">{% if is_visa_invoice %}We are pleased to submit the invoice for the following visa assistance service(s):{% elif is_credit_note %}Credit for the following cancelled/refunded air ticket:{% else %}We are pleased to submit the invoice for the following issued air ticket(s):{% endif %}</div>
+    <div class="esrm-intro">{% if is_general_invoice and general_order.print_profile == "Payroll" %}We are pleased to submit the payroll service invoice for the period stated below:{% elif is_general_invoice %}We are pleased to submit the invoice for the following professional service(s):{% elif is_visa_invoice %}We are pleased to submit the invoice for the following visa assistance service(s):{% elif is_credit_note %}Credit for the following cancelled/refunded air ticket:{% else %}We are pleased to submit the invoice for the following issued air ticket(s):{% endif %}</div>
 
     <table class="esrm-ticket-table{% if is_visa_invoice %} esrm-visa-table{% endif %}">
-        {% if is_visa_invoice %}
+        {% if is_general_invoice %}
+        <colgroup><col style="width:5%;"><col style="width:13%;"><col style="width:20%;"><col style="width:35%;"><col style="width:15%;"><col style="width:12%;"></colgroup>
+        <thead><tr><th>#</th><th>Service Date</th><th>Service</th><th>Particulars</th><th>Amount</th><th>Remarks</th></tr></thead>
+        <tbody>
+        {% for service in general_services %}
+        <tr><td class="center">{{ loop.index }}</td><td class="center">{{ frappe.utils.formatdate(service.service_date, "dd/MM/yyyy") if service.service_date else "" }}</td><td>{{ service.service_offering or "" }}</td><td><strong>{{ service.subject or "" }}</strong>{% if service.description %}<br>{{ service.description }}{% endif %}</td><td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(service.amount or 0) }}</td><td>{{ service.remarks or "" }}</td></tr>
+        {% endfor %}
+        <tr class="esrm-total-row"><td colspan="4" class="amount">Total</td><td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(invoice_total) }}</td><td></td></tr>
+        </tbody>
+        {% if general_order and general_order.applicants %}
+        </table><div class="esrm-section-title">Applicant Annexure</div><table class="esrm-ticket-table esrm-visa-table">
+        <thead><tr><th>#</th><th>Applicant</th><th>Nationality</th><th>Passport No.</th><th>Permit / Reference</th><th>Validity</th></tr></thead><tbody>
+        {% for applicant in general_order.applicants %}<tr><td class="center">{{ loop.index }}</td><td>{{ applicant.applicant_name }}</td><td>{{ applicant.nationality or "" }}</td><td>{{ applicant.passport_number or "" }}</td><td>{{ applicant.permit_reference or "" }}</td><td>{{ frappe.utils.formatdate(applicant.expiry_date, "dd/MM/yyyy") if applicant.expiry_date else "" }}</td></tr>{% endfor %}
+        </tbody>
+        {% endif %}
+        {% elif is_visa_invoice %}
         <colgroup>
             <col style="width: 4%;">
             <col style="width: 12%;">
