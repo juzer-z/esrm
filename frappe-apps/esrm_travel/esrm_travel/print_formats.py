@@ -245,7 +245,7 @@ ESRM_TICKET_INVOICE_HTML = """
 {% endif %}
 {% set company_name = "Ezzy Services & Resource Management" %}
 {% set company_address = settings.invoice_letterhead_address if settings.invoice_letterhead_address and settings.invoice_letterhead_address != company_name else "" %}
-{% set invoice_total = credit_summary.revised_total if credit_summary and credit_summary.has_adjustments else (doc.rounded_total or doc.grand_total or 0) %}
+{% set invoice_total = credit_summary.revised_total if credit_summary and credit_summary.has_adjustments else ((doc.grand_total or 0) if is_general_invoice else (doc.rounded_total or doc.grand_total or 0)) %}
 {% set customer_address = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else none %}
 {% if not tickets and doc.esrm_ticket_booking %}
     {% set booking = frappe.get_doc("Ticket Booking", doc.esrm_ticket_booking) %}
