@@ -22,6 +22,10 @@ AGENT_PERMISSIONS = {
         read=1, write=1, create=1, submit=1, email=1, print=1, report=1,
         export=1, select=1
     ),
+    "General Service Order": dict(
+        read=1, write=1, create=1, submit=1, email=1, print=1, report=1,
+        export=1, select=1
+    ),
     "Customer": dict(read=1, write=1, create=1, print=1, report=1, export=1, select=1),
     "Sales Invoice": dict(read=1, write=1, create=1, email=1, print=1, report=1, export=1, select=1),
     "Payment Entry": dict(read=1, write=1, create=1, print=1, report=1, export=1, select=1),
@@ -73,24 +77,28 @@ def setup_agent_permissions():
         values.update({field: int(allowed.get(field, 0)) for field in permission_fields})
         frappe.get_doc(values).insert(ignore_permissions=True)
 def setup_workflow():
-    if not frappe.db.exists("Workflow", "Ticket Booking Approval"):
-        return
-    workflow = frappe.get_doc("Workflow", "Ticket Booking Approval")
-    for state in workflow.states:
-        if state.state == "Pending Approval":
-            state.allow_edit = APPROVER_ROLE
-        elif state.state in {"Draft", "Approved", "Rejected"}:
-            state.allow_edit = AGENT_ROLE
-    for transition in workflow.transitions:
-        if transition.action in {"Approve", "Reject"}:
-            transition.allowed = APPROVER_ROLE
-            transition.allow_self_approval = 0
-        elif transition.action == "Send for Approval":
-            transition.allowed = AGENT_ROLE
-            # The booking owner must be able to send their own draft onward.
-            # Final approval and rejection remain restricted to approvers above.
-            transition.allow_self_approval = 1
-    workflow.save(ignore_permissions=True)
+    for workflow_name in (
+        "Ticket Booking Approval",
+        "Visa Service Approval",
+        "General Service Order Approval",
+    ):
+        if not frappe.db.exists("Workflow", workflow_name):
+            continue
+        workflow = frappe.get_doc("Workflow", workflow_name)
+        for state in workflow.states:
+            if state.state == "Pending Approval":
+                state.allow_edit = APPROVER_ROLE
+            elif state.state in {"Draft", "Approved", "Rejected"}:
+                state.allow_edit = AGENT_ROLE
+        for transition in workflow.transitions:
+            if transition.action in {"Approve", "Reject"}:
+                transition.allowed = APPROVER_ROLE
+                transition.allow_self_approval = 0
+            elif transition.action == "Send for Approval":
+                transition.allowed = AGENT_ROLE
+                # Owners may send their own drafts onward, but cannot approve them.
+                transition.allow_self_approval = 1
+        workflow.save(ignore_permissions=True)
 
 
 def configure_administrator():

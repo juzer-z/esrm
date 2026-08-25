@@ -97,10 +97,10 @@
       {"allow_edit":"ESRM Agent","doc_status":"0","doctype":"Workflow Document State","is_optional_state":1,"state":"Rejected","update_field":"approval_status","update_value":"Rejected"}
     ],
     "transitions": [
-      {"action":"Send for Approval","allow_self_approval":0,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Draft"},
+      {"action":"Send for Approval","allow_self_approval":1,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Draft"},
       {"action":"Approve","allow_self_approval":0,"allowed":"ESRM Approver","doctype":"Workflow Transition","next_state":"Approved","state":"Pending Approval"},
       {"action":"Reject","allow_self_approval":0,"allowed":"ESRM Approver","doctype":"Workflow Transition","next_state":"Rejected","state":"Pending Approval"},
-      {"action":"Send for Approval","allow_self_approval":0,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Rejected"}
+      {"action":"Send for Approval","allow_self_approval":1,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Rejected"}
     ],
     "workflow_name": "Visa Service Approval",
     "workflow_state_field": "approval_status"
@@ -114,10 +114,10 @@
       {"allow_edit":"ESRM Agent","doc_status":"0","doctype":"Workflow Document State","is_optional_state":1,"state":"Rejected","update_field":"approval_status","update_value":"Rejected"}
     ],
     "transitions":[
-      {"action":"Send for Approval","allow_self_approval":0,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Draft"},
+      {"action":"Send for Approval","allow_self_approval":1,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Draft"},
       {"action":"Approve","allow_self_approval":0,"allowed":"ESRM Approver","doctype":"Workflow Transition","next_state":"Approved","state":"Pending Approval"},
       {"action":"Reject","allow_self_approval":0,"allowed":"ESRM Approver","doctype":"Workflow Transition","next_state":"Rejected","state":"Pending Approval"},
-      {"action":"Send for Approval","allow_self_approval":0,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Rejected"}
+      {"action":"Send for Approval","allow_self_approval":1,"allowed":"ESRM Agent","doctype":"Workflow Transition","next_state":"Pending Approval","state":"Rejected"}
     ],
     "workflow_name":"General Service Order Approval","workflow_state_field":"approval_status"
   }
