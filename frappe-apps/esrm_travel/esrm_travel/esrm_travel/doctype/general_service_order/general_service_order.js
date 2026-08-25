@@ -33,12 +33,15 @@ frappe.ui.form.on("General Service Charge", {
 });
 
 function calculate(frm) {
-    let invoice = 0, withholding = 0, revenue = 0, cost = 0;
+    let invoice = 0, withholding = 0, revenue = 0, cost = 0, ait_withholding = 0;
     (frm.doc.charges || []).forEach((row) => {
         const amount = flt(row.percentage) ? flt(row.basis_amount) * flt(row.percentage) / 100 : flt(row.quantity || 1) * flt(row.rate);
         frappe.model.set_value(row.doctype, row.name, "amount", amount);
         if (row.included_in_invoice) invoice += amount;
-        if (row.is_withholding) withholding += amount;
+        if (row.is_withholding) {
+            withholding += Math.abs(amount);
+            if (row.charge_type === "AIT") ait_withholding += Math.abs(amount);
+        }
         if (row.is_revenue) revenue += amount;
         cost += flt(row.actual_cost);
     });
@@ -47,7 +50,7 @@ function calculate(frm) {
     frm.set_value("net_expected_receipt", invoice - withholding);
     frm.set_value("revenue_amount", revenue);
     frm.set_value("total_cost", cost);
-    frm.set_value("profit", revenue - cost);
+    frm.set_value("profit", revenue - cost - ait_withholding);
 }
 
 const AMEND_FIELDS = ["customer","reference","invoice_number","entry_date","service_family","service_offering","calculation_profile","subject","description","client_reference","purchase_order","attention_to","service_period_from","service_period_to","currency","print_profile","signatory_name","signatory_designation","charges","applicants","annexure_details","customer_remarks"];

@@ -75,7 +75,7 @@ class GeneralServiceOrder(Document):
             frappe.throw(_("Add at least one applicant for this service offering."))
 
     def calculate_totals(self):
-        invoice = withholding = revenue = cost = 0
+        invoice = withholding = revenue = cost = ait_withholding = 0
         for row in self.charges:
             row.amount = flt(row.basis_amount) * flt(row.percentage) / 100 if flt(row.percentage) else flt(row.quantity or 1) * flt(row.rate)
             if row.charge_type == "Discount" and row.amount > 0:
@@ -84,6 +84,8 @@ class GeneralServiceOrder(Document):
                 invoice += row.amount
             if row.is_withholding:
                 withholding += abs(row.amount)
+                if row.charge_type == "AIT":
+                    ait_withholding += abs(row.amount)
             if row.is_revenue:
                 revenue += row.amount
             cost += flt(row.actual_cost)
@@ -92,7 +94,9 @@ class GeneralServiceOrder(Document):
         self.net_expected_receipt = invoice - withholding
         self.revenue_amount = revenue
         self.total_cost = cost
-        self.profit = revenue - cost
+        # ESRM's operating MIS reports profit after advance income tax, while
+        # VAT withholding remains outside profit because VAT is not revenue.
+        self.profit = revenue - cost - ait_withholding
 
     def create_sales_invoice_on_approval(self):
         if self.sales_invoice:
