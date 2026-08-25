@@ -791,8 +791,8 @@ ESRM_TICKET_INVOICE_HTML = """
         <tr>
             <td class="esrm-signature">
                 <div class="esrm-signature-line">
-                    <div class="esrm-signature-name">{{ settings.invoice_signatory_name or "" }}</div>
-                    <div>{{ settings.invoice_signatory_designation or "" }}</div>
+                    <div class="esrm-signature-name">{{ (general_order.signatory_name or settings.invoice_signatory_name or "") if is_general_invoice and general_order else (settings.invoice_signatory_name or "") }}</div>
+                    <div>{{ (general_order.signatory_designation or settings.invoice_signatory_designation or "") if is_general_invoice and general_order else (settings.invoice_signatory_designation or "") }}</div>
                     <div>{{ company_name }}</div>
                 </div>
             </td>
