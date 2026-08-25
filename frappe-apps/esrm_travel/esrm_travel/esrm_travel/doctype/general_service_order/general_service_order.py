@@ -230,7 +230,8 @@ def make_sales_invoice_from_orders(order_names, amended_from=None):
                 item["cost_center"] = settings.default_cost_center
             items.append(item)
         details.append({"general_service_order":order.name,"service_date":order.entry_date,"service_offering":order.service_offering,"subject":order.subject,"description":order.description,"quantity":1,"amount":order.invoice_amount,"remarks":order.customer_remarks})
-    values = {"doctype":"Sales Invoice","customer":customer,"company":settings.default_company,"currency":currency,"conversion_rate":1,"selling_price_list":frappe.db.get_single_value("Selling Settings", "selling_price_list") or "Standard Selling","price_list_currency":currency,"plc_conversion_rate":1,"posting_date":nowdate(),"due_date":nowdate(),"esrm_invoice_number":orders[0].invoice_number,"esrm_general_service_order":orders[0].name,"esrm_general_services":details,"items":items,"remarks":"\n\n".join(f"{o.subject}\n{o.description or ''}" for o in orders)}
+    posting_date = orders[0].entry_date or nowdate()
+    values = {"doctype":"Sales Invoice","customer":customer,"company":settings.default_company,"currency":currency,"conversion_rate":1,"selling_price_list":frappe.db.get_single_value("Selling Settings", "selling_price_list") or "Standard Selling","price_list_currency":currency,"plc_conversion_rate":1,"posting_date":posting_date,"due_date":posting_date,"set_posting_time":1,"esrm_invoice_number":orders[0].invoice_number,"esrm_general_service_order":orders[0].name,"esrm_general_services":details,"items":items,"remarks":"\n\n".join(f"{o.subject}\n{o.description or ''}" for o in orders)}
     if amended_from:
         values["amended_from"] = amended_from
     invoice = frappe.get_doc(values)

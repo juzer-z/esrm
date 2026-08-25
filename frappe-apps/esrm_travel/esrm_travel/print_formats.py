@@ -594,7 +594,7 @@ ESRM_TICKET_INVOICE_HTML = """
                     </tr>
                     <tr>
                         <td class="esrm-meta-label">Date</td>
-                        <td>{{ frappe.utils.formatdate(doc.posting_date, "dd MMM yyyy") }}</td>
+                        <td>{{ frappe.utils.formatdate(general_order.entry_date if is_general_invoice and general_order else doc.posting_date, "dd MMM yyyy") }}</td>
                     </tr>
                     <tr>
                         <td class="esrm-meta-label">Currency</td>
@@ -629,19 +629,22 @@ ESRM_TICKET_INVOICE_HTML = """
                 {% else %}
                     <div>{{ (doc.address_display or "") | safe }}</div>
                 {% endif %}
+                {% if is_general_invoice and general_order.attention_to %}<div style="margin-top:4px;"><strong>Attention:</strong> {{ general_order.attention_to }}</div>{% endif %}
             </td>
             <td class="esrm-summary">
                 <div class="esrm-summary-block">
                     <div class="esrm-section-title">{{ ("Payroll Service Details" if general_order and general_order.print_profile == "Payroll" else "General Service Details") if is_general_invoice else ("Visa Service Details" if is_visa_invoice else "Booking Details") }}</div>
                     <table class="esrm-summary-table">
                         <tr>
-                            <td class="esrm-summary-label">Purpose:</td>
+                            <td class="esrm-summary-label">{{ "Subject:" if is_general_invoice else "Purpose:" }}</td>
                             <td>{{ general_services[0].subject if is_general_invoice else (visa_services[0].service_description if is_visa_invoice else (tickets[0].purpose if tickets and tickets[0].purpose else "")) }}</td>
                         </tr>
-                        <tr>
+                        {% if not is_general_invoice or general_order.reference or general_order.client_reference or general_order.purchase_order %}<tr>
                             <td class="esrm-summary-label">Reference:</td>
-                            <td>{{ general_order.reference if is_general_invoice else (invoice_no.split("-")[0] if is_visa_invoice and invoice_no else (tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else ""))) }}</td>
+                            <td>{{ (general_order.reference or general_order.client_reference or general_order.purchase_order) if is_general_invoice else (invoice_no.split("-")[0] if is_visa_invoice and invoice_no else (tickets[0].reference if tickets and tickets[0].reference else (invoice_no.split("-")[0] if invoice_no else ""))) }}</td>
                         </tr>
+                        {% endif %}
+                        {% if is_general_invoice and (general_order.service_period_from or general_order.service_period_to) %}<tr><td class="esrm-summary-label">Period:</td><td>{{ frappe.utils.formatdate(general_order.service_period_from, "dd MMM yyyy") if general_order.service_period_from else "" }}{% if general_order.service_period_to %} to {{ frappe.utils.formatdate(general_order.service_period_to, "dd MMM yyyy") }}{% endif %}</td></tr>{% endif %}
                     </table>
                 </div>
             </td>
@@ -652,13 +655,14 @@ ESRM_TICKET_INVOICE_HTML = """
 
     <table class="esrm-ticket-table{% if is_visa_invoice %} esrm-visa-table{% endif %}">
         {% if is_general_invoice %}
-        <colgroup><col style="width:5%;"><col style="width:13%;"><col style="width:20%;"><col style="width:35%;"><col style="width:15%;"><col style="width:12%;"></colgroup>
-        <thead><tr><th>#</th><th>Service Date</th><th>Service</th><th>Particulars</th><th>Amount</th><th>Remarks</th></tr></thead>
+        {% set invoice_charges = general_order.charges | selectattr("included_in_invoice") | list %}
+        <colgroup><col style="width:6%;"><col style="width:69%;"><col style="width:25%;"></colgroup>
+        <thead><tr><th>#</th><th>Description</th><th>Amount ({{ doc.currency or "BDT" }})</th></tr></thead>
         <tbody>
-        {% for service in general_services %}
-        <tr><td class="center">{{ loop.index }}</td><td class="center">{{ frappe.utils.formatdate(service.service_date, "dd/MM/yyyy") if service.service_date else "" }}</td><td>{{ service.service_offering or "" }}</td><td><strong>{{ service.subject or "" }}</strong>{% if service.description %}<br>{{ service.description }}{% endif %}</td><td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(service.amount or 0) }}</td><td>{{ service.remarks or "" }}</td></tr>
+        {% for charge in invoice_charges %}
+        <tr><td class="center">{{ loop.index }}</td><td>{{ charge.description or charge.charge_type }}</td><td class="amount">{{ "{:,.2f}".format(charge.amount or 0) }}</td></tr>
         {% endfor %}
-        <tr class="esrm-total-row"><td colspan="4" class="amount">Total</td><td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(invoice_total) }}</td><td></td></tr>
+        <tr class="esrm-total-row"><td colspan="2" class="amount">Total</td><td class="amount">{{ "{:,.2f}".format(invoice_total) }}</td></tr>
         </tbody>
         {% if general_order and general_order.applicants %}
         </table><div class="esrm-section-title">Applicant Annexure</div><table class="esrm-ticket-table esrm-visa-table">

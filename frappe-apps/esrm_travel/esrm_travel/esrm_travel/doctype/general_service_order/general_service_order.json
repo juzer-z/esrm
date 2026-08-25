@@ -57,6 +57,6 @@
  "permissions":[
   {"role":"System Manager","create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"submit":1,"write":1},
   {"role":"ESRM Approver","create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"submit":1,"write":1},
-  {"role":"ESRM Agent","create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"write":1}
+  {"role":"ESRM Agent","create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"submit":1,"write":1}
  ],"search_fields":"customer,subject,service_offering,invoice_number,reference,sales_invoice","sort_field":"modified","sort_order":"DESC","title_field":"subject","track_changes":1
 }
