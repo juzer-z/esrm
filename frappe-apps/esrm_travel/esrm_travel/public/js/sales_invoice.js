@@ -44,5 +44,37 @@ frappe.ui.form.on("Sales Invoice", {
                 __("Actions")
             );
         }
+
+        if (frm.doc.docstatus === 2) {
+            frm.add_custom_button(
+                __("Delete Cancelled Invoice"),
+                () => {
+                    frappe.confirm(
+                        __("Permanently delete cancelled Sales Invoice {0}? ERPNext will block deletion if another document still depends on it.", [
+                            frm.doc.name,
+                        ]),
+                        () => {
+                            frappe.call({
+                                method: "frappe.client.delete",
+                                args: {
+                                    doctype: "Sales Invoice",
+                                    name: frm.doc.name,
+                                },
+                                freeze: true,
+                                freeze_message: __("Deleting Cancelled Invoice..."),
+                                callback: () => {
+                                    frappe.show_alert({
+                                        message: __("Cancelled Sales Invoice deleted."),
+                                        indicator: "green",
+                                    });
+                                    frappe.set_route("List", "Sales Invoice");
+                                },
+                            });
+                        }
+                    );
+                },
+                __("Actions")
+            );
+        }
     },
 });
