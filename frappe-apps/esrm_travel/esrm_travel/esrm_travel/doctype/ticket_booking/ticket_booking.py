@@ -45,6 +45,7 @@ INVOICE_BOUND_FIELDS = {
     "ticket_number",
     "airline",
     "flight_date",
+    "return_date",
     "flight_number",
     "travel_type",
     "trip_type",
@@ -76,6 +77,7 @@ class TicketBooking(Document):
             self.invoice_number = self.get_next_invoice_number()
 
     def validate(self):
+        self.validate_travel_dates()
         self.validate_amounts()
         self.set_cost_completion()
         self.calculate_profitability()
@@ -89,9 +91,19 @@ class TicketBooking(Document):
             self.validate_administrator_amendment()
         else:
             self.validate_booking_owner_cost_update()
+        self.validate_travel_dates()
         self.validate_amounts()
         self.set_cost_completion()
         self.calculate_profitability()
+
+    def validate_travel_dates(self):
+        if self.trip_type == "Return":
+            if not self.return_date:
+                frappe.throw(_("Return Date is required for a return trip."))
+            if self.flight_date and getdate(self.return_date) < getdate(self.flight_date):
+                frappe.throw(_("Return Date cannot be before Flight Date."))
+        else:
+            self.return_date = None
 
     def on_submit(self):
         self.create_sales_invoice_on_approval()
@@ -1206,6 +1218,7 @@ def build_invoice_description(booking):
         f"Route: {booking.route_summary}" if booking.route_summary else "",
         f"Airline: {booking.airline}" if booking.airline else "",
         f"Flight Date: {booking.flight_date}" if booking.flight_date else "",
+        f"Return Date: {booking.return_date}" if booking.return_date else "",
     ]
     return "\n".join(part for part in parts if part)
 

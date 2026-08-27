@@ -26,6 +26,9 @@ frappe.ui.form.on("Ticket Booking", {
     },
 
     trip_type(frm) {
+        if (frm.doc.trip_type !== "Return" && frm.doc.return_date) {
+            frm.set_value("return_date", null);
+        }
         update_route_summary(frm);
     },
 

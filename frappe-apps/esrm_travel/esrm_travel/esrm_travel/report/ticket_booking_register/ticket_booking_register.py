@@ -17,6 +17,7 @@ def get_columns():
         {"label": _("Record"), "fieldname": "name", "fieldtype": "Dynamic Link", "options": "service_doctype", "width": 155},
         {"label": _("Entry Date"), "fieldname": "entry_date", "fieldtype": "Date", "width": 100},
         {"label": _("Travel Date"), "fieldname": "travel_date", "fieldtype": "Date", "width": 100},
+        {"label": _("Return Date"), "fieldname": "return_date", "fieldtype": "Date", "width": 100},
         {"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 170},
         {"label": _("Passenger / Applicant"), "fieldname": "traveller_name", "fieldtype": "Data", "width": 170},
         {"label": _("Reference"), "fieldname": "reference", "fieldtype": "Data", "width": 110},
@@ -82,6 +83,7 @@ def get_ticket_rows(filters):
         select
             'Ticket' as service_type, 'Ticket Booking' as service_doctype,
             tb.name, tb.issue_date as entry_date, tb.flight_date as travel_date,
+            tb.return_date,
             tb.customer, tb.passenger_name as traveller_name, tb.reference,
             tb.airline, tb.ticket_number as document_number, tb.route_summary,
             '' as destination_country, '' as visa_service, tb.invoice_number,
@@ -122,7 +124,7 @@ def get_visa_rows(filters):
         select
             'Visa' as service_type, 'Visa Service' as service_doctype,
             vs.name, vs.application_date as entry_date,
-            vs.intended_travel_date as travel_date, vs.customer,
+            vs.intended_travel_date as travel_date, null as return_date, vs.customer,
             vs.applicant_name as traveller_name, vs.reference, '' as airline,
             vs.passport_number as document_number, '' as route_summary,
             vs.destination_country,
@@ -179,7 +181,8 @@ def get_general_service_rows(filters):
         f"""
         select
             'General Service' as service_type, 'General Service Order' as service_doctype,
-            gso.name, gso.entry_date, gso.entry_date as travel_date, gso.customer,
+            gso.name, gso.entry_date, gso.entry_date as travel_date,
+            null as return_date, gso.customer,
             gso.subject as traveller_name, gso.reference, '' as airline,
             gso.client_reference as document_number, '' as route_summary,
             '' as destination_country, gso.service_offering as visa_service,
