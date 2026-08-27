@@ -28,7 +28,17 @@ AGENT_PERMISSIONS = {
     ),
     "Customer": dict(read=1, write=1, create=1, print=1, report=1, export=1, select=1),
     "Sales Invoice": dict(read=1, write=1, create=1, email=1, print=1, report=1, export=1, select=1),
-    "Payment Entry": dict(read=1, write=1, create=1, print=1, report=1, export=1, select=1),
+    "Payment Entry": dict(
+        read=1, write=1, create=1, submit=1, print=1, report=1, export=1,
+        select=1
+    ),
+    # Read-only accounting masters required to prepare and submit receipts.
+    "Company": dict(read=1, select=1),
+    "Account": dict(read=1, select=1),
+    "Mode of Payment": dict(read=1, select=1),
+    "Bank Account": dict(read=1, select=1),
+    "Currency": dict(read=1, select=1),
+    "Cost Center": dict(read=1, select=1),
     "Page": dict(read=1, select=1),
 }
 
