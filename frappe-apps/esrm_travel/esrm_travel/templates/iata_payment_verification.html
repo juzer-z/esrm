@@ -34,10 +34,11 @@
 <div class="period">Issue date period: <strong>{{ from_date }}</strong> to <strong>{{ to_date }}</strong></div>
 <table>
     <thead><tr>
-        <th style="width:3%">#</th><th style="width:8%">Issue Date</th><th style="width:10%">Booking</th>
-        <th style="width:14%">Passenger</th><th style="width:12%">Ticket No.</th><th style="width:7%">PNR</th>
-        <th style="width:9%">Route</th><th style="width:6%">Airline</th><th style="width:15%">Customer</th>
-        <th style="width:8%">Gross Amount</th><th style="width:8%">IATA Amount</th>
+        <th style="width:2%">#</th><th style="width:7%">Issue Date</th><th style="width:9%">Booking</th>
+        <th style="width:12%">Passenger</th><th style="width:11%">Ticket No.</th><th style="width:6%">PNR</th>
+        <th style="width:8%">Route</th><th style="width:5%">Airline</th><th style="width:13%">Customer</th>
+        <th style="width:7%">Gross Amount</th><th style="width:7%">Invoice Amount</th>
+        <th style="width:7%">IATA Amount</th><th style="width:6%">Payment Status</th>
     </tr></thead>
     <tbody>
     {% for row in rows %}
@@ -46,13 +47,14 @@
         <td>{{ row.name }}</td><td>{{ row.passenger_name or "" }}</td><td>{{ row.ticket_number or "" }}</td>
         <td>{{ row.pnr or "" }}</td><td>{{ row.route_summary or "" }}</td><td>{{ row.airline or "" }}</td>
         <td>{{ row.customer or "" }}</td><td class="num">{{ frappe.utils.fmt_money(row.gross_amount or 0, currency="BDT") }}</td>
-        <td class="num">{{ frappe.utils.fmt_money(row.iata_amount or 0, currency="BDT") }}</td>
+        <td class="num">{{ frappe.utils.fmt_money(row.invoice_amount or 0, currency="BDT") }}</td>
+        <td class="num">{{ frappe.utils.fmt_money(row.iata_amount or 0, currency="BDT") }}</td><td>{{ row.invoice_status or "Not Invoiced" }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="11" class="center">No approved IATA bookings found for this period.</td></tr>
+    <tr><td colspan="13" class="center">No approved IATA bookings found for this period.</td></tr>
     {% endfor %}
     </tbody>
-    <tfoot><tr><td colspan="9" class="num">TOTAL</td><td class="num">{{ frappe.utils.fmt_money(total_gross, currency="BDT") }}</td><td class="num">{{ frappe.utils.fmt_money(total_iata, currency="BDT") }}</td></tr></tfoot>
+    <tfoot><tr><td colspan="9" class="num">TOTAL</td><td class="num">{{ frappe.utils.fmt_money(total_gross, currency="BDT") }}</td><td class="num">{{ frappe.utils.fmt_money(total_invoice, currency="BDT") }}</td><td class="num">{{ frappe.utils.fmt_money(total_iata, currency="BDT") }}</td><td></td></tr></tfoot>
 </table>
 <div class="summary">Verified booking count: <strong>{{ rows|length }}</strong> &nbsp;&nbsp; Total payable to IATA: <strong>{{ frappe.utils.fmt_money(total_iata, currency="BDT") }}</strong></div>
 <div class="audit">

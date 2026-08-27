@@ -37,7 +37,9 @@ def get_columns():
         {"label": _("Airline"), "fieldname": "airline", "fieldtype": "Data", "width": 85},
         {"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 180},
         {"label": _("Gross Amount"), "fieldname": "gross_amount", "fieldtype": "Currency", "width": 120},
+        {"label": _("Invoice Amount"), "fieldname": "invoice_amount", "fieldtype": "Currency", "width": 120},
         {"label": _("IATA Amount"), "fieldname": "iata_amount", "fieldtype": "Currency", "width": 120},
+        {"label": _("Payment Status"), "fieldname": "invoice_status", "fieldtype": "Data", "width": 115},
     ]
 
 
@@ -47,8 +49,10 @@ def get_data(filters):
         select
             tb.name, tb.issue_date, tb.passenger_name, tb.ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
-            tb.gross_amount, tb.iata_amount
+            tb.gross_amount, tb.invoice_amount, tb.iata_amount,
+            coalesce(si.status, tb.invoice_status, 'Not Invoiced') as invoice_status
         from `tabTicket Booking` tb
+        left join `tabSales Invoice` si on si.name = tb.sales_invoice
         where tb.docstatus = 1
           and tb.approval_status = 'Approved'
           and tb.payment_mode = 'IATA'
@@ -64,6 +68,7 @@ def get_summary(data):
     return [
         {"label": _("Approved IATA Bookings"), "value": len(data), "datatype": "Int", "indicator": "Blue"},
         {"label": _("Gross Amount"), "value": sum(row.gross_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
+        {"label": _("Invoice Amount"), "value": sum(row.invoice_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("IATA Amount"), "value": sum(row.iata_amount or 0 for row in data), "datatype": "Currency", "indicator": "Blue"},
     ]
 
@@ -73,7 +78,14 @@ def _verification_code(filters, data):
         "from_date": str(filters.from_date),
         "to_date": str(filters.to_date),
         "rows": [
-            [row.name, str(row.issue_date), str(row.iata_amount or 0)] for row in data
+            [
+                row.name,
+                str(row.issue_date),
+                str(row.invoice_amount or 0),
+                str(row.iata_amount or 0),
+                row.invoice_status or "",
+            ]
+            for row in data
         ],
     }
     return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest().upper()
@@ -92,6 +104,7 @@ def download_verified_pdf(from_date, to_date):
         "from_date": formatdate(filters.from_date, "dd MMM yyyy"),
         "to_date": formatdate(filters.to_date, "dd MMM yyyy"),
         "total_gross": sum(row.gross_amount or 0 for row in data),
+        "total_invoice": sum(row.invoice_amount or 0 for row in data),
         "total_iata": sum(row.iata_amount or 0 for row in data),
         "generated_by": frappe.session.user,
         "generated_at": get_datetime(generated_at).strftime("%d %b %Y %I:%M %p"),
