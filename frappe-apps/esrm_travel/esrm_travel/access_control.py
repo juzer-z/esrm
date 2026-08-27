@@ -43,14 +43,32 @@ AGENT_PERMISSIONS = {
 }
 
 
-def redirect_agent_from_setup_wizard():
+def redirect_to_esrm_dashboard():
     request = getattr(frappe.local, "request", None)
-    if (
-        frappe.session.user == AGENT_USER
-        and request
-        and request.path.rstrip("/") == "/app/setup-wizard"
-    ):
+    user = frappe.session.user
+    if not request or user in {None, "", "Guest"}:
+        return
+    if frappe.get_cached_value("User", user, "user_type") != "System User":
+        return
+
+    path = request.path.rstrip("/") or "/"
+    if path in {"/app", "/app/home", "/app/setup-wizard"}:
         raise HTTPException(response=redirect("/app/esrm", code=302))
+
+
+def set_esrm_login_destination(login_manager=None):
+    """Make ESRM the post-login and default Desk workspace for all staff."""
+    user = getattr(login_manager, "user", None)
+    if not user or user == "Guest":
+        return
+    if frappe.get_cached_value("User", user, "user_type") != "System User":
+        return
+
+    if frappe.db.get_value("User", user, "default_workspace") != "ESRM":
+        frappe.db.set_value(
+            "User", user, "default_workspace", "ESRM", update_modified=False
+        )
+        frappe.clear_cache(user=user)
 
 
 def setup_access_controls():
@@ -59,9 +77,23 @@ def setup_access_controls():
     configure_administrator()
     setup_agent_permissions()
     setup_workflow()
+    configure_system_user_homepages()
     if frappe.db.exists("User", AGENT_USER):
         configure_agent_user()
     frappe.clear_cache()
+
+
+def configure_system_user_homepages():
+    users = frappe.get_all(
+        "User",
+        filters={"enabled": 1, "user_type": "System User"},
+        pluck="name",
+    )
+    for user in users:
+        if frappe.db.get_value("User", user, "default_workspace") != "ESRM":
+            frappe.db.set_value(
+                "User", user, "default_workspace", "ESRM", update_modified=False
+            )
 
 
 def ensure_role(role_name):

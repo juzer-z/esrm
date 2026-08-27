@@ -3,6 +3,24 @@
     let latestNotificationName = null;
     let pollingStarted = false;
     let profitCardObserver = null;
+    let redirectingHome = false;
+
+    function redirectHomeWorkspaceToESRM() {
+        if (frappe.session.user === "Guest" || redirectingHome) {
+            return;
+        }
+
+        const route = frappe.get_route();
+        if (route[0] !== "Workspaces" || route[1] !== "Home") {
+            return;
+        }
+
+        redirectingHome = true;
+        frappe.set_route("esrm");
+        window.setTimeout(() => {
+            redirectingHome = false;
+        }, 500);
+    }
 
     function getNotificationView() {
         return frappe.frappe_toolbar && frappe.frappe_toolbar.notifications;
@@ -87,8 +105,11 @@
 
     $(document).on("toolbar_setup", startPolling);
     $(document).on("page-change", () => {
+        redirectHomeWorkspaceToESRM();
         window.setTimeout(removeProfitCardForNonAdministrator, 0);
     });
+    frappe.router.on("change", redirectHomeWorkspaceToESRM);
     $(startPolling);
     $(watchProfitCardVisibility);
+    $(redirectHomeWorkspaceToESRM);
 })();

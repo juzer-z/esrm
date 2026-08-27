@@ -16,7 +16,7 @@ jinja = {
     ],
 }
 
-app_include_js = ["/assets/esrm_travel/js/approval_notification_refresh.js?v=eb8affd"]
+app_include_js = ["/assets/esrm_travel/js/approval_notification_refresh.js?v=esrm-home-1"]
 
 doctype_js = {
     "Customer": "public/js/customer.js",
@@ -27,7 +27,8 @@ doctype_list_js = {
     "Sales Invoice": "public/js/sales_invoice_list.js",
 }
 
-before_request = "esrm_travel.access_control.redirect_agent_from_setup_wizard"
+before_request = "esrm_travel.access_control.redirect_to_esrm_dashboard"
+on_login = "esrm_travel.access_control.set_esrm_login_destination"
 
 after_migrate = "esrm_travel.dashboard.setup_workspace"
 
