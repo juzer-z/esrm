@@ -19,6 +19,7 @@ jinja = {
 app_include_js = ["/assets/esrm_travel/js/approval_notification_refresh.js?v=eb8affd"]
 
 doctype_js = {
+    "Customer": "public/js/customer.js",
     "Sales Invoice": "public/js/sales_invoice.js",
 }
 
