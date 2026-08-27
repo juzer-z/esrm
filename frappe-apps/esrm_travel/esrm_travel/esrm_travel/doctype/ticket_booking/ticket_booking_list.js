@@ -2,31 +2,40 @@ frappe.listview_settings["Ticket Booking"] = {
     onload(listview) {
         bind_refreshing_workflow_actions(listview);
 
-        listview.page.add_actions_menu_item(__("Create Sales Invoice"), () => {
+        if (frappe.session.user !== "Administrator") {
+            return;
+        }
+
+        listview.page.add_actions_menu_item(__("Create Combined Invoice"), () => {
             const selected = listview.get_checked_items();
 
-            if (!selected.length) {
-                frappe.msgprint(__("Select one or more approved ticket bookings first."));
+            if (selected.length < 2) {
+                frappe.msgprint(__("Select at least two approved, individually invoiced ticket bookings."));
                 return;
             }
 
-            frappe.call({
-                method: "esrm_travel.esrm_travel.doctype.ticket_booking.ticket_booking.make_group_sales_invoice",
-                args: {
-                    bookings: selected.map((row) => row.name),
-                },
-                freeze: true,
-                freeze_message: __("Creating Sales Invoice..."),
-                callback: (r) => {
-                    if (r.message) {
-                        frappe.show_alert({
-                            message: __("Sales Invoice {0} created", [r.message]),
-                            indicator: "green",
-                        });
-                        frappe.set_route("Form", "Sales Invoice", r.message);
-                    }
-                },
-            });
+            frappe.confirm(
+                __("Cancel the {0} individual unpaid invoices and replace them with one combined invoice?", [selected.length]),
+                () => {
+                    frappe.call({
+                        method: "esrm_travel.esrm_travel.doctype.ticket_booking.ticket_booking.make_group_sales_invoice",
+                        args: {
+                            bookings: selected.map((row) => row.name),
+                        },
+                        freeze: true,
+                        freeze_message: __("Consolidating Sales Invoices..."),
+                        callback: (r) => {
+                            if (r.message) {
+                                frappe.show_alert({
+                                    message: __("Combined Sales Invoice {0} created", [r.message]),
+                                    indicator: "green",
+                                });
+                                frappe.set_route("Form", "Sales Invoice", r.message);
+                            }
+                        },
+                    });
+                }
+            );
         });
     },
 };

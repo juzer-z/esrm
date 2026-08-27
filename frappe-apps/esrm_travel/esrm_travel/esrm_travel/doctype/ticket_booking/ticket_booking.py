@@ -859,12 +859,161 @@ def make_group_sales_invoice(bookings):
 
         bookings = json.loads(bookings)
 
-    return make_and_submit_sales_invoice(bookings)
+    return consolidate_invoiced_bookings(bookings)
 
 
-def make_and_submit_sales_invoice(booking_names, amended_from=None):
+def consolidate_invoiced_bookings(booking_names):
+    """Replace individual unpaid booking invoices with one submitted invoice."""
+    if frappe.session.user != "Administrator":
+        frappe.throw(
+            _("Only Administrator can consolidate submitted Sales Invoices."),
+            frappe.PermissionError,
+        )
+
+    booking_names = list(dict.fromkeys(booking_names or []))
+    if len(booking_names) < 2:
+        frappe.throw(_("Select at least two Ticket Bookings to consolidate."))
+    if len(booking_names) > 100:
+        frappe.throw(_("Consolidate no more than 100 Ticket Bookings at a time."))
+
+    bookings = [frappe.get_doc("Ticket Booking", name) for name in booking_names]
+    invoices = validate_bookings_for_consolidation(bookings)
+    consolidated_invoice_number = bookings[0].get_next_invoice_number()
+    cancelled_invoice_names = [invoice.name for invoice in invoices]
+
+    # Frappe rolls the request back as one transaction if any cancellation,
+    # invoice insert, or submission fails.
+    from esrm_travel.workflow import cancel_sales_invoice
+
+    for invoice in invoices:
+        cancel_sales_invoice(invoice.name)
+
+    invoice_name = make_and_submit_sales_invoice(
+        booking_names,
+        invoice_number=consolidated_invoice_number,
+    )
+    invoice = frappe.get_doc("Sales Invoice", invoice_name)
+    invoice.add_comment(
+        "Info",
+        _("Consolidated from cancelled Sales Invoices: {0}").format(
+            ", ".join(cancelled_invoice_names)
+        ),
+    )
+    for booking in bookings:
+        frappe.get_doc("Ticket Booking", booking.name).add_comment(
+            "Info",
+            _("Individual invoice replaced by consolidated Sales Invoice {0}.").format(
+                invoice_name
+            ),
+        )
+
+    return invoice_name
+
+
+def validate_bookings_for_consolidation(bookings):
+    customer = None
+    company = None
+    currency = None
+    invoices = []
+    invoice_names = set()
+
+    for booking in bookings:
+        if booking.docstatus != 1 or booking.approval_status != "Approved":
+            frappe.throw(
+                _("Ticket Booking {0} must be approved and submitted.").format(
+                    booking.name
+                )
+            )
+        if not booking.sales_invoice:
+            frappe.throw(
+                _("Ticket Booking {0} does not have an individual Sales Invoice.").format(
+                    booking.name
+                )
+            )
+
+        invoice = frappe.get_doc("Sales Invoice", booking.sales_invoice)
+        if invoice.name in invoice_names:
+            frappe.throw(
+                _("The selected bookings are already linked to the same Sales Invoice {0}.").format(
+                    invoice.name
+                )
+            )
+        invoice_names.add(invoice.name)
+
+        if invoice.docstatus != 1 or invoice.is_return:
+            frappe.throw(
+                _("Sales Invoice {0} must be a submitted standard invoice.").format(
+                    invoice.name
+                )
+            )
+        linked_bookings = frappe.get_all(
+            "ESRM Invoice Ticket",
+            filters={"parent": invoice.name, "parenttype": "Sales Invoice"},
+            pluck="ticket_booking",
+        )
+        if linked_bookings != [booking.name]:
+            frappe.throw(
+                _("Sales Invoice {0} is not an individual invoice for {1}.").format(
+                    invoice.name, booking.name
+                )
+            )
+        if flt(invoice.grand_total) <= 0 or abs(
+            flt(invoice.outstanding_amount) - flt(invoice.grand_total)
+        ) > 0.005:
+            frappe.throw(
+                _("Sales Invoice {0} has a payment or allocation and cannot be consolidated.").format(
+                    invoice.name
+                )
+            )
+        if frappe.db.exists(
+            "Payment Entry Reference",
+            {
+                "reference_doctype": "Sales Invoice",
+                "reference_name": invoice.name,
+                "docstatus": 1,
+            },
+        ):
+            frappe.throw(
+                _("Sales Invoice {0} is referenced by a submitted Payment Entry.").format(
+                    invoice.name
+                )
+            )
+        if frappe.db.exists(
+            "Sales Invoice",
+            {"return_against": invoice.name, "docstatus": 1},
+        ):
+            frappe.throw(
+                _("Sales Invoice {0} has a submitted credit/debit adjustment.").format(
+                    invoice.name
+                )
+            )
+
+        customer = customer or invoice.customer
+        company = company or invoice.company
+        currency = currency or invoice.currency
+        if invoice.customer != customer:
+            frappe.throw(_("All selected bookings must have the same customer."))
+        if invoice.company != company or invoice.currency != currency:
+            frappe.throw(
+                _("All selected invoices must have the same company and currency.")
+            )
+        if booking.customer != customer:
+            frappe.throw(
+                _("Ticket Booking {0} does not match its invoice customer.").format(
+                    booking.name
+                )
+            )
+
+        invoices.append(invoice)
+
+    return invoices
+
+
+def make_and_submit_sales_invoice(booking_names, amended_from=None, invoice_number=None):
     invoice_name = make_sales_invoice_from_bookings(
-        booking_names, amended_from=amended_from
+        booking_names,
+        amended_from=amended_from,
+        invoice_number=invoice_number,
     )
     invoice = frappe.get_doc("Sales Invoice", invoice_name)
     invoice.flags.ignore_permissions = True
@@ -872,7 +1021,9 @@ def make_and_submit_sales_invoice(booking_names, amended_from=None):
     return invoice.name
 
 
-def make_sales_invoice_from_bookings(booking_names, amended_from=None):
+def make_sales_invoice_from_bookings(
+    booking_names, amended_from=None, invoice_number=None
+):
     if not booking_names:
         frappe.throw(_("Select at least one Ticket Booking."))
 
@@ -921,7 +1072,7 @@ def make_sales_invoice_from_bookings(booking_names, amended_from=None):
             "plc_conversion_rate": 1,
             "posting_date": nowdate(),
             "due_date": get_invoice_due_date(bookings),
-            "esrm_invoice_number": bookings[0].invoice_number,
+            "esrm_invoice_number": invoice_number or bookings[0].invoice_number,
             "items": invoice_items,
             "esrm_ticket_booking": bookings[0].name,
             "esrm_ticket_bookings": invoice_tickets,
@@ -934,9 +1085,14 @@ def make_sales_invoice_from_bookings(booking_names, amended_from=None):
     sales_invoice.insert(ignore_permissions=True)
 
     for booking in bookings:
-        booking.db_set("sales_invoice", sales_invoice.name)
-        booking.db_set("invoice_status", sales_invoice.status or "Draft")
-        booking.db_set("status", "Invoiced")
+        values = {
+            "sales_invoice": sales_invoice.name,
+            "invoice_status": sales_invoice.status or "Draft",
+            "status": "Invoiced",
+        }
+        if invoice_number:
+            values["invoice_number"] = invoice_number
+        frappe.db.set_value("Ticket Booking", booking.name, values, update_modified=True)
 
     return sales_invoice.name
 
