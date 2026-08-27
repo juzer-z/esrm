@@ -55,11 +55,8 @@ frappe.ui.form.on("Sales Invoice", {
                         ]),
                         () => {
                             frappe.call({
-                                method: "frappe.client.delete",
-                                args: {
-                                    doctype: "Sales Invoice",
-                                    name: frm.doc.name,
-                                },
+                                method: "esrm_travel.workflow.delete_cancelled_sales_invoice",
+                                args: { invoice_name: frm.doc.name },
                                 freeze: true,
                                 freeze_message: __("Deleting Cancelled Invoice..."),
                                 callback: () => {

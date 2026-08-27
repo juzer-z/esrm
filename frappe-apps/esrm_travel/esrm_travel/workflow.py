@@ -166,6 +166,108 @@ def cancel_sales_invoice(invoice_name):
     return invoice.name
 
 
+@frappe.whitelist()
+def delete_cancelled_sales_invoice(invoice_name):
+    """Delete a cancelled invoice and its cancelled ledger rows safely."""
+    if frappe.session.user != "Administrator":
+        frappe.throw(
+            _("Only Administrator can delete cancelled Sales Invoices."),
+            frappe.PermissionError,
+        )
+
+    invoice = frappe.get_doc("Sales Invoice", invoice_name)
+    if invoice.docstatus != 2:
+        frappe.throw(_("Only a cancelled Sales Invoice can be deleted."))
+
+    newer_amendment = frappe.db.get_value(
+        "Sales Invoice",
+        {"amended_from": invoice.name},
+        "name",
+    )
+    if newer_amendment:
+        frappe.throw(
+            _("Delete amended Sales Invoice {0} first.").format(newer_amendment)
+        )
+
+    if frappe.db.exists(
+        "Payment Entry Reference",
+        {
+            "reference_doctype": "Sales Invoice",
+            "reference_name": invoice.name,
+            "docstatus": 1,
+        },
+    ):
+        frappe.throw(
+            _("Sales Invoice {0} is linked to a submitted Payment Entry.").format(
+                invoice.name
+            )
+        )
+    if frappe.db.exists("Sales Invoice", {"return_against": invoice.name}):
+        frappe.throw(
+            _("Sales Invoice {0} has a credit/debit adjustment that must be deleted first.").format(
+                invoice.name
+            )
+        )
+
+    active_bookings = frappe.get_all(
+        "Ticket Booking",
+        filters={"sales_invoice": invoice.name, "docstatus": ("!=", 2)},
+        pluck="name",
+    )
+    if active_bookings:
+        frappe.throw(
+            _("Unlink the active Ticket Booking(s) first: {0}").format(
+                ", ".join(active_bookings)
+            )
+        )
+
+    non_cancelled_gl = frappe.db.exists(
+        "GL Entry",
+        {
+            "voucher_type": "Sales Invoice",
+            "voucher_no": invoice.name,
+            "is_cancelled": 0,
+        },
+    )
+    if non_cancelled_gl:
+        frappe.throw(
+            _("Sales Invoice {0} still has active General Ledger entries.").format(
+                invoice.name
+            )
+        )
+
+    if frappe.db.exists(
+        "Stock Ledger Entry",
+        {"voucher_type": "Sales Invoice", "voucher_no": invoice.name},
+    ):
+        frappe.throw(
+            _("Stock-linked Sales Invoices cannot be deleted through this action.")
+        )
+
+    # AccountsController normally performs this cleanup only when the global
+    # Delete Linked Ledger Entries setting is enabled. Keep that global safety
+    # setting unchanged and clean only this already-cancelled invoice here.
+    frappe.db.delete(
+        "GL Entry",
+        {"voucher_type": "Sales Invoice", "voucher_no": invoice.name},
+    )
+    frappe.db.delete(
+        "Payment Ledger Entry",
+        {"voucher_type": "Sales Invoice", "voucher_no": invoice.name},
+    )
+    frappe.db.delete(
+        "Payment Ledger Entry",
+        {
+            "against_voucher_type": "Sales Invoice",
+            "against_voucher_no": invoice.name,
+            "delinked": 1,
+        },
+    )
+
+    frappe.delete_doc("Sales Invoice", invoice.name, ignore_permissions=True)
+    return invoice.name
+
+
 def prepare_invoice_dates_for_submission(invoice):
     """Keep the draft's displayed posting date when submitting it in bulk."""
     if invoice.meta.has_field("set_posting_time"):
