@@ -13,6 +13,7 @@ source_link = ""
 jinja = {
     "methods": [
         "esrm_travel.print_formats.get_invoice_credit_summary",
+        "esrm_travel.print_formats.get_money_receipt_audit_code",
     ],
 }
 

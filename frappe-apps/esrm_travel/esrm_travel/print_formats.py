@@ -1,4 +1,6 @@
 import base64
+import hashlib
+import json
 from pathlib import Path
 
 import frappe
@@ -6,6 +8,7 @@ from frappe.utils import flt
 
 
 PRINT_FORMAT_NAME = "ESRM Ticket Invoice"
+MONEY_RECEIPT_PRINT_FORMAT_NAME = "ESRM Money Receipt"
 COMPANY_NAME = "Ezzy Services & Resource Management"
 COMPANY_HEADER_DETAILS = "House 214, Road 13, New DOHS, Mohakhali, Dhaka - 1206. Email: esrmltd@ezzy.group"
 LEGACY_COMPANY_NAMES = (
@@ -27,6 +30,31 @@ def get_invoice_html():
     )
 
 
+def get_money_receipt_html():
+    return ESRM_MONEY_RECEIPT_HTML.replace(
+        "__ESRM_LOGO_DATA_URI__", get_image_data_uri("esrm-logo-print.png", "image/png")
+    )
+
+
+def get_money_receipt_audit_code(payment_entry_name):
+    payment = frappe.get_doc("Payment Entry", payment_entry_name)
+    payload = {
+        "name": payment.name,
+        "docstatus": payment.docstatus,
+        "posting_date": str(payment.posting_date),
+        "party": payment.party,
+        "received_amount": str(payment.received_amount or 0),
+        "modified": str(payment.modified),
+        "references": [
+            [row.reference_doctype, row.reference_name, str(row.allocated_amount or 0)]
+            for row in payment.references
+        ],
+    }
+    return hashlib.sha256(
+        json.dumps(payload, separators=(",", ":")).encode()
+    ).hexdigest().upper()
+
+
 def get_image_data_uri(filename, mime_type):
     image_path = Path(frappe.get_app_path("esrm_travel", "public", "images", filename))
     if not image_path.exists():
@@ -40,7 +68,9 @@ def get_image_data_uri(filename, mime_type):
 
 def setup_print_formats():
     setup_esrm_ticket_invoice_print_format()
+    setup_esrm_money_receipt_print_format()
     ensure_default_sales_invoice_print_format()
+    ensure_default_money_receipt_print_format()
     ensure_invoice_print_defaults()
 
 
@@ -54,6 +84,21 @@ def setup_esrm_ticket_invoice_print_format():
             "custom_format": 1,
             "disabled": 0,
             "html": get_invoice_html(),
+        }
+    )
+    save_doc(doc)
+
+
+def setup_esrm_money_receipt_print_format():
+    doc = get_or_create("Print Format", MONEY_RECEIPT_PRINT_FORMAT_NAME)
+    doc.update(
+        {
+            "doc_type": "Payment Entry",
+            "module": "ESRM Travel",
+            "print_format_type": "Jinja",
+            "custom_format": 1,
+            "disabled": 0,
+            "html": get_money_receipt_html(),
         }
     )
     save_doc(doc)
@@ -90,6 +135,44 @@ def ensure_default_sales_invoice_print_format():
         )
 
     frappe.clear_cache(doctype="Sales Invoice")
+
+
+def ensure_default_money_receipt_print_format():
+    if not frappe.db.exists("Print Format", MONEY_RECEIPT_PRINT_FORMAT_NAME):
+        return
+
+    current_default = frappe.get_meta("Payment Entry").default_print_format
+    if current_default == MONEY_RECEIPT_PRINT_FORMAT_NAME:
+        return
+
+    existing_property_setter = frappe.db.exists(
+        "Property Setter",
+        {
+            "doc_type": "Payment Entry",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+        },
+    )
+    if existing_property_setter:
+        frappe.db.set_value(
+            "Property Setter",
+            existing_property_setter,
+            "value",
+            MONEY_RECEIPT_PRINT_FORMAT_NAME,
+        )
+    else:
+        frappe.make_property_setter(
+            {
+                "doctype": "Payment Entry",
+                "doctype_or_field": "DocType",
+                "property": "default_print_format",
+                "value": MONEY_RECEIPT_PRINT_FORMAT_NAME,
+                "property_type": "Data",
+            },
+            module="ESRM Travel",
+        )
+
+    frappe.clear_cache(doctype="Payment Entry")
 
 
 def ensure_invoice_print_defaults():
@@ -801,6 +884,103 @@ ESRM_TICKET_INVOICE_HTML = """
     <div class="esrm-accreditation-logos">
         <img class="esrm-iata-logo" src="__IATA_LOGO_DATA_URI__">
         <img class="esrm-atab-logo" src="__ATAB_LOGO_DATA_URI__">
+    </div>
+</div>
+"""
+
+
+ESRM_MONEY_RECEIPT_HTML = """
+{% set settings = frappe.get_doc("ESRM Travel Settings") %}
+{% set receipt_amount = doc.received_amount if doc.payment_type == "Receive" else doc.paid_amount %}
+{% set receipt_currency = doc.paid_to_account_currency if doc.payment_type == "Receive" else doc.paid_from_account_currency %}
+{% set audit_code = get_money_receipt_audit_code(doc.name) %}
+<style>
+    @page { size: A4 portrait; margin: 12mm; }
+    .mr-page { font-family: Arial, sans-serif; color: #1c2f3a; font-size: 10px; position: relative; min-height: 260mm; }
+    .mr-watermark { position: fixed; top: 43%; left: 5%; width: 90%; text-align: center; font-size: 43px; font-weight: 700; letter-spacing: 3px; color: rgba(25, 79, 101, 0.07); z-index: -1; }
+    .mr-header { border-bottom: 2px solid #174f68; padding: 0 0 10px; }
+    .mr-logo { width: 145px; float: left; }
+    .mr-company { text-align: right; line-height: 1.5; font-size: 10px; }
+    .mr-company-name { font-size: 15px; color: #174f68; font-weight: 700; }
+    .mr-title { margin: 18px 0 12px; text-align: center; color: #174f68; font-size: 23px; letter-spacing: 1px; }
+    .mr-status { text-align: center; font-weight: 700; margin: -8px 0 12px; color: #a61e1e; }
+    .mr-meta, .mr-details, .mr-allocations { width: 100%; border-collapse: collapse; }
+    .mr-meta td, .mr-details td { border: 1px solid #aebbc3; padding: 7px 8px; }
+    .mr-label { width: 19%; background: #e8f0f4; font-weight: 700; color: #244b5e; }
+    .mr-details { margin-top: 12px; }
+    .mr-section { margin: 16px 0 6px; color: #174f68; font-weight: 700; font-size: 11px; }
+    .mr-allocations th, .mr-allocations td { border: 1px solid #aebbc3; padding: 6px; }
+    .mr-allocations th { background: #e8f0f4; color: #244b5e; text-align: center; font-size: 9px; }
+    .mr-number { text-align: right; white-space: nowrap; }
+    .mr-center { text-align: center; }
+    .mr-total td { background: #f2f5f7; font-weight: 700; }
+    .mr-words { margin-top: 12px; border: 1px solid #aebbc3; padding: 9px; font-size: 11px; }
+    .mr-remarks { margin-top: 10px; color: #43545e; }
+    .mr-signature { margin-top: 36px; width: 42%; border-top: 1px solid #40545f; padding-top: 5px; line-height: 1.45; }
+    .mr-signature-name { font-weight: 700; }
+    .mr-audit { position: absolute; bottom: 0; width: 100%; border-top: 1px solid #b7c2c8; padding-top: 6px; color: #65757e; font-size: 7.5px; line-height: 1.45; }
+    .mr-code { font-family: monospace; font-size: 7px; }
+</style>
+
+<div class="mr-page">
+    <div class="mr-watermark">
+        {% if doc.docstatus == 0 %}DRAFT · NOT VALID{% elif doc.docstatus == 2 %}CANCELLED{% else %}SYSTEM GENERATED RECEIPT{% endif %}
+    </div>
+    <div class="mr-header">
+        <img class="mr-logo" src="__ESRM_LOGO_DATA_URI__">
+        <div class="mr-company">
+            <div class="mr-company-name">EZZY SERVICES &amp; RESOURCE MANAGEMENT</div>
+            {{ settings.invoice_letterhead_address or "" }}
+        </div>
+        <div style="clear: both"></div>
+    </div>
+
+    <div class="mr-title">MONEY RECEIPT</div>
+    {% if doc.docstatus != 1 %}<div class="mr-status">{{ "DRAFT — NOT A VALID RECEIPT" if doc.docstatus == 0 else "CANCELLED RECEIPT" }}</div>{% endif %}
+
+    <table class="mr-meta">
+        <tr><td class="mr-label">Receipt No.</td><td><strong>{{ doc.name }}</strong></td><td class="mr-label">Receipt Date</td><td>{{ frappe.utils.formatdate(doc.posting_date, "dd MMM yyyy") }}</td></tr>
+        <tr><td class="mr-label">Received From</td><td><strong>{{ doc.party_name or doc.party or "" }}</strong></td><td class="mr-label">Payment Mode</td><td>{{ doc.mode_of_payment or "Not specified" }}</td></tr>
+    </table>
+
+    <table class="mr-details">
+        <tr><td class="mr-label">Amount Received</td><td><strong>{{ frappe.utils.fmt_money(receipt_amount or 0, currency=receipt_currency or "BDT") }}</strong></td><td class="mr-label">Reference No.</td><td>{{ doc.reference_no or "—" }}</td></tr>
+        <tr><td class="mr-label">Reference Date</td><td>{{ frappe.utils.formatdate(doc.reference_date, "dd MMM yyyy") if doc.reference_date else "—" }}</td><td class="mr-label">Deposit Account</td><td>{{ doc.paid_to if doc.payment_type == "Receive" else doc.paid_from }}</td></tr>
+    </table>
+
+    <div class="mr-words"><strong>Amount in words:</strong> {{ frappe.utils.money_in_words(receipt_amount or 0, receipt_currency or "BDT") }}</div>
+
+    <div class="mr-section">INVOICE ALLOCATION</div>
+    <table class="mr-allocations">
+        <thead><tr><th style="width:5%">#</th><th style="width:18%">Document Type</th><th style="width:27%">Invoice / Reference</th><th style="width:16%">Invoice Total</th><th style="width:17%">Previous Outstanding</th><th style="width:17%">Amount Allocated</th></tr></thead>
+        <tbody>
+        {% for row in doc.references %}
+        <tr>
+            <td class="mr-center">{{ loop.index }}</td><td>{{ row.reference_doctype or "" }}</td><td>{{ row.reference_name or "" }}</td>
+            <td class="mr-number">{{ frappe.utils.fmt_money(row.total_amount or 0, currency=receipt_currency or "BDT") }}</td>
+            <td class="mr-number">{{ frappe.utils.fmt_money(row.outstanding_amount or 0, currency=receipt_currency or "BDT") }}</td>
+            <td class="mr-number">{{ frappe.utils.fmt_money(row.allocated_amount or 0, currency=receipt_currency or "BDT") }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="mr-center">Payment received as an unallocated customer advance.</td></tr>
+        {% endfor %}
+        <tr class="mr-total"><td colspan="5" class="mr-number">TOTAL ALLOCATED</td><td class="mr-number">{{ frappe.utils.fmt_money(doc.total_allocated_amount or 0, currency=receipt_currency or "BDT") }}</td></tr>
+        {% if doc.unallocated_amount %}<tr class="mr-total"><td colspan="5" class="mr-number">UNALLOCATED / ADVANCE</td><td class="mr-number">{{ frappe.utils.fmt_money(doc.unallocated_amount or 0, currency=receipt_currency or "BDT") }}</td></tr>{% endif %}
+        </tbody>
+    </table>
+
+    {% if doc.remarks %}<div class="mr-remarks"><strong>Remarks:</strong> {{ doc.remarks }}</div>{% endif %}
+
+    <div class="mr-signature">
+        <div class="mr-signature-name">{{ settings.invoice_signatory_name or "" }}</div>
+        <div>{{ settings.invoice_signatory_designation or "" }}</div>
+        <div>Ezzy Services &amp; Resource Management</div>
+    </div>
+
+    <div class="mr-audit">
+        This is a system-generated receipt based on Payment Entry {{ doc.name }}. It is valid only while the Payment Entry remains submitted.<br>
+        Created by: {{ doc.owner }} &nbsp; | &nbsp; Last updated: {{ frappe.utils.format_datetime(doc.modified, "dd MMM yyyy, hh:mm a") }}<br>
+        Audit code: <span class="mr-code">{{ audit_code }}</span>
     </div>
 </div>
 """
