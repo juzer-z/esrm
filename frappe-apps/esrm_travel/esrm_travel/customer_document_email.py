@@ -1,7 +1,7 @@
 from html import escape
 
 import frappe
-from frappe.utils import fmt_money, formatdate, get_url
+from frappe.utils import fmt_money, formatdate
 
 
 INVOICE_PRINT_FORMAT = "ESRM Ticket Invoice"
@@ -53,16 +53,12 @@ def send_invoice_email(invoice_name):
         <p>Dear {customer},</p>
         <p>Please find attached invoice <strong>{number}</strong>, dated {date}, for
         <strong>{amount}</strong>.</p>
-        <p>You may also review the transaction in ESRM using the link below.</p>
-        <p><a href="{url}" style="background:#0b7285;color:#fff;padding:10px 16px;
-        text-decoration:none;border-radius:4px;">View Invoice</a></p>
         <p>Regards,<br>Ezzy Services &amp; Resource Management</p>
     """.format(
         customer=escape(invoice.customer_name or invoice.customer),
         number=escape(display_number),
         date=formatdate(invoice.posting_date, "dd MMM yyyy"),
         amount=fmt_money(invoice.grand_total, currency=currency),
-        url=escape(get_url(f"/app/sales-invoice/{invoice.name}"), quote=True),
     )
     frappe.sendmail(
         recipients=[recipient],
@@ -96,15 +92,12 @@ def send_money_receipt_email(payment_entry_name):
         <p>Thank you. We have recorded your payment of <strong>{amount}</strong>
         on {date}. Your system-generated money receipt <strong>{receipt}</strong>
         is attached.</p>
-        <p><a href="{url}" style="background:#0b7285;color:#fff;padding:10px 16px;
-        text-decoration:none;border-radius:4px;">View Payment</a></p>
         <p>Regards,<br>Ezzy Services &amp; Resource Management</p>
     """.format(
         customer=escape(payment.party_name or payment.party),
         amount=fmt_money(payment.received_amount, currency=currency),
         date=formatdate(payment.posting_date, "dd MMM yyyy"),
         receipt=escape(payment.name),
-        url=escape(get_url(f"/app/payment-entry/{payment.name}"), quote=True),
     )
     frappe.sendmail(
         recipients=[recipient],
