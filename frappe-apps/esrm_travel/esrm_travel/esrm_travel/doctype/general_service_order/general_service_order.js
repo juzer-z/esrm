@@ -4,6 +4,7 @@ frappe.ui.form.on("General Service Order", {
         frm.set_df_property("service_owner", "read_only", frappe.session.user !== "Administrator");
         if (frm.is_new() && !frm.doc.service_owner) frm.set_value("service_owner", frappe.session.user);
         setup_amendment(frm);
+        setup_copy_to_draft(frm);
         if (frm.doc.sales_invoice) {
             frm.add_custom_button(__("Open Sales Invoice"), () => frappe.set_route("Form", "Sales Invoice", frm.doc.sales_invoice), __("Actions"));
         }
@@ -26,6 +27,30 @@ frappe.ui.form.on("General Service Order", {
     charges_add: calculate,
     charges_remove: calculate,
 });
+
+function setup_copy_to_draft(frm) {
+    if (frm.is_new()) return;
+
+    frm.add_custom_button(__("Copy to New Draft"), () => {
+        const copy = frappe.model.copy_doc(frm.doc);
+        Object.assign(copy, {
+            approval_status: "Draft",
+            status: "Draft",
+            invoice_status: "Not Invoiced",
+            sales_invoice: null,
+            invoice_number: null,
+            entry_date: frappe.datetime.get_today(),
+            amendment_reason: null,
+            last_amended_by: null,
+            last_amended_at: null,
+            amendment_count: 0,
+        });
+        if (frappe.session.user !== "Administrator") {
+            copy.service_owner = frappe.session.user;
+        }
+        frappe.set_route("Form", copy.doctype, copy.name);
+    }, __("Actions"));
+}
 
 frappe.ui.form.on("General Service Charge", {
     quantity: calculate, rate: calculate, percentage: calculate, basis_amount: calculate,
