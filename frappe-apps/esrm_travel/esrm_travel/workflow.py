@@ -315,6 +315,8 @@ def on_submit_sales_invoice(doc, method=None):
         sync_visa_service(service_name, sales_invoice_name=doc.name)
     for order_name in get_related_general_service_orders_from_sales_invoice(doc):
         sync_general_service_order(order_name, sales_invoice_name=doc.name)
+    from esrm_travel.customer_document_email import queue_invoice_email
+    queue_invoice_email(doc)
 
 
 def on_update_after_submit_sales_invoice(doc, method=None):
@@ -403,6 +405,8 @@ def on_submit_payment_entry(doc, method=None):
         sync_visa_service(service_name)
     for order_name in get_related_general_service_orders_from_payment_entry(doc):
         sync_general_service_order(order_name)
+    from esrm_travel.customer_document_email import queue_money_receipt_email
+    queue_money_receipt_email(doc)
 
 
 def on_update_after_submit_payment_entry(doc, method=None):
