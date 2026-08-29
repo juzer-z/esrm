@@ -1,0 +1,20 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["memo_type", "memo_number", "memo_date", "airline_code", "amount", "attachment", "remarks"],
+ "fields": [
+  {"default":"ACM","fieldname":"memo_type","fieldtype":"Select","label":"Memo Type","options":"ACM\nADM","reqd":1,"in_list_view":1},
+  {"fieldname":"memo_number","fieldtype":"Data","label":"Memo Number","reqd":1,"in_list_view":1},
+  {"fieldname":"memo_date","fieldtype":"Date","label":"Memo Date","reqd":1,"in_list_view":1},
+  {"fieldname":"airline_code","fieldtype":"Data","label":"Airline Code","in_list_view":1},
+  {"fieldname":"amount","fieldtype":"Currency","label":"Signed Amount","reqd":1,"in_list_view":1,"description":"Enter ACM credits as negative amounts and ADM charges as positive amounts."},
+  {"fieldname":"attachment","fieldtype":"Attach","label":"Memo Attachment"},
+  {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"}
+ ],
+ "istable": 1,
+ "module": "ESRM Travel",
+ "name": "IATA Settlement Memo",
+ "permissions": []
+}

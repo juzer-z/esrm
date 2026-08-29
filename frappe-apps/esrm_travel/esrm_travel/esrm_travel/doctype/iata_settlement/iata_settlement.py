@@ -35,6 +35,7 @@ class IATASettlement(Document):
     def validate(self):
         self.validate_period()
         self.validate_accounts()
+        self.validate_memos()
         self.calculate_totals()
         self.status = "Draft" if self.docstatus == 0 else self.status
 
@@ -138,8 +139,38 @@ class IATASettlement(Document):
         self.international_amount = sum(
             flt(row.iata_amount) for row in self.bookings if row.travel_type != "Domestic"
         )
+        self.international_amount += sum(flt(row.amount) for row in self.memos)
         self.expected_total = flt(self.domestic_amount) + flt(self.international_amount)
         self.difference_amount = flt(self.deposit_amount) - flt(self.expected_total)
+
+    def validate_memos(self):
+        seen = set()
+        for row in self.memos:
+            key = (row.memo_type, (row.memo_number or "").strip())
+            if key in seen:
+                frappe.throw(_("Duplicate IATA memo {0}.").format(row.memo_number))
+            seen.add(key)
+            if row.memo_date and not (getdate(self.period_from) <= getdate(row.memo_date) <= getdate(self.period_to)):
+                frappe.throw(_("Memo {0} date must be within the settlement period.").format(row.memo_number))
+            if row.memo_type == "ACM" and flt(row.amount) >= 0:
+                frappe.throw(_("ACM {0} must have a negative amount.").format(row.memo_number))
+            if row.memo_type == "ADM" and flt(row.amount) <= 0:
+                frappe.throw(_("ADM {0} must have a positive amount.").format(row.memo_number))
+            duplicate = frappe.db.sql(
+                """
+                select memo.parent
+                from `tabIATA Settlement Memo` memo
+                inner join `tabIATA Settlement` settlement on settlement.name = memo.parent
+                where memo.memo_type = %(memo_type)s
+                  and memo.memo_number = %(memo_number)s
+                  and memo.parent != %(current)s
+                  and settlement.docstatus < 2
+                limit 1
+                """,
+                {"memo_type": row.memo_type, "memo_number": row.memo_number, "current": self.name or ""},
+            )
+            if duplicate:
+                frappe.throw(_("IATA memo {0} is already recorded in {1}.").format(row.memo_number, duplicate[0][0]))
 
     def validate_not_already_settled(self):
         booking_names = [row.ticket_booking for row in self.bookings if not row.iata_adjustment]

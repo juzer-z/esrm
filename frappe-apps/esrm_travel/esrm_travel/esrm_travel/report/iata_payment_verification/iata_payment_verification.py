@@ -29,7 +29,7 @@ def validate_filters(filters=None):
 def get_columns():
     return [
         {"label": _("Issue Date"), "fieldname": "issue_date", "fieldtype": "Date", "width": 100},
-        {"label": _("Booking"), "fieldname": "name", "fieldtype": "Link", "options": "Ticket Booking", "width": 135},
+        {"label": _("Booking / Memo"), "fieldname": "name", "fieldtype": "Data", "width": 135},
         {"label": _("Passenger"), "fieldname": "passenger_name", "fieldtype": "Data", "width": 180},
         {"label": _("Ticket Number"), "fieldname": "ticket_number", "fieldtype": "Data", "width": 145},
         {"label": _("PNR"), "fieldname": "pnr", "fieldtype": "Data", "width": 90},
@@ -70,6 +70,20 @@ def get_data(filters):
         where adj.docstatus = 1
           and adj.status in ('Unsettled', 'Settled')
           and adj.adjustment_date between %(from_date)s and %(to_date)s
+        union all
+        select
+            memo.memo_type as entry_type,
+            memo.memo_number as name, memo.memo_date as issue_date,
+            concat(memo.memo_type, ' - Airline ', coalesce(nullif(memo.airline_code, ''), 'N/A')) as passenger_name,
+            '' as ticket_number, '' as pnr, '' as route_summary,
+            memo.airline_code as airline, '' as customer,
+            0 as gross_amount, 0 as invoice_amount, memo.amount as iata_amount,
+            concat(memo.memo_type, ' Credit') as invoice_status
+        from `tabIATA Settlement Memo` memo
+        inner join `tabIATA Settlement` settlement on settlement.name = memo.parent
+        where memo.parenttype = 'IATA Settlement'
+          and settlement.docstatus < 2
+          and memo.memo_date between %(from_date)s and %(to_date)s
         order by issue_date, name, entry_type desc
         """,
         filters,

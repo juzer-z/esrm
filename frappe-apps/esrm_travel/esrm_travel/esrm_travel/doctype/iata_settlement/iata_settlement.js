@@ -63,3 +63,28 @@ function load_bookings(frm) {
         },
     });
 }
+
+frappe.ui.form.on("IATA Settlement Memo", {
+    memos_add(frm) {
+        recalculate_memo_total(frm);
+    },
+    memos_remove(frm) {
+        recalculate_memo_total(frm);
+    },
+    amount(frm) {
+        recalculate_memo_total(frm);
+    },
+});
+
+function recalculate_memo_total(frm) {
+    const bookingTotal = (frm.doc.bookings || []).reduce(
+        (total, row) => total + flt(row.iata_amount), 0,
+    );
+    const memoTotal = (frm.doc.memos || []).reduce(
+        (total, row) => total + flt(row.amount), 0,
+    );
+    const expected = bookingTotal + memoTotal;
+    frm.set_value("expected_total", expected);
+    frm.set_value("deposit_amount", expected);
+    frm.set_value("difference_amount", 0);
+}

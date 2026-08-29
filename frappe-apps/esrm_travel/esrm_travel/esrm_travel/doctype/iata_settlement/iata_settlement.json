@@ -7,7 +7,7 @@
  "field_order": [
   "overview_section", "naming_series", "company", "period_from", "period_to", "column_break_1", "status", "deposit_date", "reference_no", "journal_entry",
   "accounting_section", "source_account", "international_expense_account", "domestic_expense_account", "currency",
-  "bookings_section", "bookings",
+  "memos_section", "memos", "bookings_section", "bookings",
   "totals_section", "international_amount", "domestic_amount", "expected_total", "column_break_2", "deposit_amount", "difference_amount",
   "evidence_section", "deposit_slip", "remarks"
  ],
@@ -27,6 +27,8 @@
   {"fieldname":"international_expense_account","fieldtype":"Link","label":"International Ticket Expense","options":"Account","hidden":1},
   {"fieldname":"domestic_expense_account","fieldtype":"Link","label":"Domestic Ticket Expense","options":"Account","hidden":1},
   {"default":"BDT","fieldname":"currency","fieldtype":"Link","label":"Currency","options":"Currency","read_only":1},
+  {"fieldname":"memos_section","fieldtype":"Section Break","label":"IATA Statement Memos (ACM / ADM)"},
+  {"fieldname":"memos","fieldtype":"Table","label":"Statement Memos","options":"IATA Settlement Memo"},
   {"fieldname":"bookings_section","fieldtype":"Section Break","label":"Included IATA Bookings"},
   {"fieldname":"bookings","fieldtype":"Table","label":"Bookings","options":"IATA Settlement Booking","read_only":1},
   {"fieldname":"totals_section","fieldtype":"Section Break","label":"Settlement Totals"},
