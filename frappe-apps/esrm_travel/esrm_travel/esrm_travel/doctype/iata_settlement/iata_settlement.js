@@ -1,4 +1,16 @@
 frappe.ui.form.on("IATA Settlement", {
+    period_from(frm) {
+        load_bookings_when_ready(frm);
+    },
+    period_to(frm) {
+        load_bookings_when_ready(frm);
+    },
+    deposit_amount(frm) {
+        frm.set_value(
+            "difference_amount",
+            flt(frm.doc.deposit_amount) - flt(frm.doc.expected_total),
+        );
+    },
     refresh(frm) {
         if (frm.doc.docstatus === 0 && frm.doc.period_from && frm.doc.period_to) {
             frm.add_custom_button(__("Load Eligible Bookings"), () => load_bookings(frm));
@@ -13,6 +25,12 @@ frappe.ui.form.on("IATA Settlement", {
         }
     },
 });
+
+function load_bookings_when_ready(frm) {
+    if (frm.doc.docstatus === 0 && frm.doc.period_from && frm.doc.period_to) {
+        load_bookings(frm);
+    }
+}
 
 function load_bookings(frm) {
     frappe.call({
@@ -39,8 +57,8 @@ function load_bookings(frm) {
             frm.set_value("domestic_amount", domestic);
             frm.set_value("international_amount", international);
             frm.set_value("expected_total", domestic + international);
-            if (!flt(frm.doc.deposit_amount)) frm.set_value("deposit_amount", domestic + international);
-            frm.set_value("difference_amount", flt(frm.doc.deposit_amount) - domestic - international);
+            frm.set_value("deposit_amount", domestic + international);
+            frm.set_value("difference_amount", 0);
             frm.refresh_fields();
         },
     });
