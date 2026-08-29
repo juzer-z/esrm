@@ -944,7 +944,7 @@ ESRM_MONEY_RECEIPT_HTML = """
     </table>
 
     <table class="mr-details">
-        <tr><td class="mr-label">Amount Received</td><td><strong>{{ frappe.utils.fmt_money(receipt_amount or 0, currency=receipt_currency or "BDT") }}</strong></td><td class="mr-label">Reference No.</td><td>{{ doc.reference_no or "—" }}</td></tr>
+        <tr><td class="mr-label">Amount Received</td><td><strong>BDT {{ frappe.utils.fmt_money(receipt_amount or 0) }}</strong></td><td class="mr-label">Reference No.</td><td>{{ doc.reference_no or "—" }}</td></tr>
         <tr><td class="mr-label">Reference Date</td><td>{{ frappe.utils.formatdate(doc.reference_date, "dd MMM yyyy") if doc.reference_date else "—" }}</td><td class="mr-label">Deposit Account</td><td>{{ doc.paid_to if doc.payment_type == "Receive" else doc.paid_from }}</td></tr>
     </table>
 
@@ -957,15 +957,15 @@ ESRM_MONEY_RECEIPT_HTML = """
         {% for row in doc.references %}
         <tr>
             <td class="mr-center">{{ loop.index }}</td><td>{{ row.reference_doctype or "" }}</td><td>{{ row.reference_name or "" }}</td>
-            <td class="mr-number">{{ frappe.utils.fmt_money(row.total_amount or 0, currency=receipt_currency or "BDT") }}</td>
-            <td class="mr-number">{{ frappe.utils.fmt_money(row.outstanding_amount or 0, currency=receipt_currency or "BDT") }}</td>
-            <td class="mr-number">{{ frappe.utils.fmt_money(row.allocated_amount or 0, currency=receipt_currency or "BDT") }}</td>
+            <td class="mr-number">BDT {{ frappe.utils.fmt_money(row.total_amount or 0) }}</td>
+            <td class="mr-number">BDT {{ frappe.utils.fmt_money(row.outstanding_amount or 0) }}</td>
+            <td class="mr-number">BDT {{ frappe.utils.fmt_money(row.allocated_amount or 0) }}</td>
         </tr>
         {% else %}
         <tr><td colspan="6" class="mr-center">Payment received as an unallocated customer advance.</td></tr>
         {% endfor %}
-        <tr class="mr-total"><td colspan="5" class="mr-number">TOTAL ALLOCATED</td><td class="mr-number">{{ frappe.utils.fmt_money(doc.total_allocated_amount or 0, currency=receipt_currency or "BDT") }}</td></tr>
-        {% if doc.unallocated_amount %}<tr class="mr-total"><td colspan="5" class="mr-number">UNALLOCATED / ADVANCE</td><td class="mr-number">{{ frappe.utils.fmt_money(doc.unallocated_amount or 0, currency=receipt_currency or "BDT") }}</td></tr>{% endif %}
+        <tr class="mr-total"><td colspan="5" class="mr-number">TOTAL ALLOCATED</td><td class="mr-number">BDT {{ frappe.utils.fmt_money(doc.total_allocated_amount or 0) }}</td></tr>
+        {% if doc.unallocated_amount %}<tr class="mr-total"><td colspan="5" class="mr-number">UNALLOCATED / ADVANCE</td><td class="mr-number">BDT {{ frappe.utils.fmt_money(doc.unallocated_amount or 0) }}</td></tr>{% endif %}
         </tbody>
     </table>
 
