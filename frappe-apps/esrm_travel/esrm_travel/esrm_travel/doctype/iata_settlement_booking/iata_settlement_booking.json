@@ -1,0 +1,21 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["ticket_booking", "issue_date", "travel_type", "passenger_name", "ticket_number", "route_summary", "iata_amount", "expense_account"],
+ "fields": [
+  {"fieldname":"ticket_booking","fieldtype":"Link","label":"Ticket Booking","options":"Ticket Booking","reqd":1,"in_list_view":1},
+  {"fieldname":"issue_date","fieldtype":"Date","label":"Issue Date","read_only":1,"in_list_view":1},
+  {"fieldname":"travel_type","fieldtype":"Data","label":"Travel Type","read_only":1,"in_list_view":1},
+  {"fieldname":"passenger_name","fieldtype":"Data","label":"Passenger","read_only":1,"in_list_view":1},
+  {"fieldname":"ticket_number","fieldtype":"Data","label":"Ticket Number","read_only":1,"in_list_view":1},
+  {"fieldname":"route_summary","fieldtype":"Data","label":"Route","read_only":1,"in_list_view":1},
+  {"fieldname":"iata_amount","fieldtype":"Currency","label":"IATA Amount","read_only":1,"in_list_view":1},
+  {"fieldname":"expense_account","fieldtype":"Link","label":"Expense Account","options":"Account","read_only":1}
+ ],
+ "istable": 1,
+ "module": "ESRM Travel",
+ "name": "IATA Settlement Booking",
+ "permissions": []
+}

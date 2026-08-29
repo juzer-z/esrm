@@ -32,6 +32,10 @@ AGENT_PERMISSIONS = {
         read=1, write=1, create=1, submit=1, print=1, report=1, export=1,
         select=1
     ),
+    "IATA Settlement": dict(
+        read=1, write=1, create=1, print=1, report=1, export=1, select=1
+    ),
+    "IATA Settlement Booking": dict(read=1, write=1, create=1, select=1),
     # Read-only accounting masters required to prepare and submit receipts.
     "Company": dict(read=1, select=1),
     "Account": dict(read=1, select=1),
@@ -39,6 +43,7 @@ AGENT_PERMISSIONS = {
     "Bank Account": dict(read=1, select=1),
     "Currency": dict(read=1, select=1),
     "Cost Center": dict(read=1, select=1),
+    "Journal Entry": dict(read=1, print=1, report=1, export=1, select=1),
     "Page": dict(read=1, select=1),
 }
 

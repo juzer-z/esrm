@@ -1,0 +1,20 @@
+{
+ "add_total_row": 1,
+ "columns": [],
+ "disable_prepared_report": 1,
+ "disabled": 0,
+ "doctype": "Report",
+ "filters": [],
+ "is_standard": "Yes",
+ "module": "ESRM Travel",
+ "name": "IATA Settlement Register",
+ "prepared_report": 0,
+ "ref_doctype": "IATA Settlement",
+ "report_name": "IATA Settlement Register",
+ "report_type": "Script Report",
+ "roles": [
+  {"role":"System Manager"},
+  {"role":"ESRM Agent"},
+  {"role":"ESRM Approver"}
+ ]
+}
