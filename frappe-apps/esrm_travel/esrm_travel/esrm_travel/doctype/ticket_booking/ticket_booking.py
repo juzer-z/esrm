@@ -413,6 +413,15 @@ class TicketBooking(Document):
             "paid_amount",
             "outstanding_amount",
         }
+        # Return Date was introduced after some approved return bookings already
+        # existed. Let the booking owner complete that one missing legacy value
+        # while entering the cost; subsequent changes remain Administrator-only.
+        if (
+            previous.trip_type == "Return"
+            and not previous.return_date
+            and self.return_date
+        ):
+            allowed_changes.add("return_date")
         restricted_changes = [
             field.fieldname
             for field in self.meta.fields
