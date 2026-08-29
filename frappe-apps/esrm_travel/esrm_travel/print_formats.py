@@ -916,7 +916,7 @@ ESRM_MONEY_RECEIPT_HTML = """
     .mr-total td { background: #f2f5f7; font-weight: 700; }
     .mr-words { margin-top: 12px; border: 1px solid #aebbc3; padding: 9px; font-size: 11px; }
     .mr-remarks { margin-top: 10px; color: #43545e; }
-    .mr-signature { margin-top: 36px; width: 42%; border-top: 1px solid #40545f; padding-top: 5px; line-height: 1.45; }
+    .mr-signature { margin-top: 36px; width: 42%; line-height: 1.45; }
     .mr-signature-name { font-weight: 700; }
     .mr-audit { position: absolute; bottom: 0; width: 100%; border-top: 1px solid #b7c2c8; padding-top: 6px; color: #65757e; font-size: 7.5px; line-height: 1.45; }
     .mr-code { font-family: monospace; font-size: 7px; }
