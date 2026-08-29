@@ -3,9 +3,11 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": ["ticket_booking", "issue_date", "travel_type", "passenger_name", "ticket_number", "route_summary", "iata_amount", "expense_account"],
+ "field_order": ["entry_type", "ticket_booking", "iata_adjustment", "issue_date", "travel_type", "passenger_name", "ticket_number", "route_summary", "iata_amount", "expense_account"],
  "fields": [
+  {"default":"Booking","fieldname":"entry_type","fieldtype":"Select","label":"Entry Type","options":"Booking\nAdjustment","read_only":1,"in_list_view":1},
   {"fieldname":"ticket_booking","fieldtype":"Link","label":"Ticket Booking","options":"Ticket Booking","reqd":1,"in_list_view":1},
+  {"fieldname":"iata_adjustment","fieldtype":"Link","label":"IATA Adjustment","options":"IATA Adjustment","read_only":1,"in_list_view":1},
   {"fieldname":"issue_date","fieldtype":"Date","label":"Issue Date","read_only":1,"in_list_view":1},
   {"fieldname":"travel_type","fieldtype":"Data","label":"Travel Type","read_only":1,"in_list_view":1},
   {"fieldname":"passenger_name","fieldtype":"Data","label":"Passenger","read_only":1,"in_list_view":1},

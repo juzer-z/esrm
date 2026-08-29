@@ -1,0 +1,38 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "naming_series:",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["naming_series", "ticket_booking", "ticket_number", "passenger_name", "travel_type", "column_break_1", "adjustment_date", "adjustment_type", "adjustment_amount", "status", "reference_no", "attachment", "remarks", "iata_settlement"],
+ "fields": [
+  {"default":"IATA-ADJ-.YYYY.-","fieldname":"naming_series","fieldtype":"Select","label":"Series","options":"IATA-ADJ-.YYYY.-","reqd":1,"set_only_once":1},
+  {"fieldname":"ticket_booking","fieldtype":"Link","label":"Ticket Booking","options":"Ticket Booking","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"ticket_number","fieldtype":"Data","label":"Ticket Number","read_only":1,"in_list_view":1},
+  {"fieldname":"passenger_name","fieldtype":"Data","label":"Passenger","read_only":1},
+  {"fieldname":"travel_type","fieldtype":"Data","label":"Travel Type","read_only":1},
+  {"fieldname":"column_break_1","fieldtype":"Column Break"},
+  {"default":"Today","fieldname":"adjustment_date","fieldtype":"Date","label":"IATA Statement Date","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"default":"Credit / Refund","fieldname":"adjustment_type","fieldtype":"Select","label":"Adjustment Type","options":"Credit / Refund\nDebit / Additional Charge","reqd":1,"in_list_view":1},
+  {"fieldname":"adjustment_amount","fieldtype":"Currency","label":"Adjustment Amount","reqd":1,"in_list_view":1,"description":"Use a negative amount for a credit/refund and a positive amount for an additional charge."},
+  {"default":"Draft","fieldname":"status","fieldtype":"Select","label":"Status","options":"Draft\nUnsettled\nSettled\nCancelled","read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"reference_no","fieldtype":"Data","label":"IATA Statement Reference","in_list_view":1},
+  {"fieldname":"attachment","fieldtype":"Attach","label":"Supporting Document"},
+  {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"},
+  {"allow_on_submit":1,"fieldname":"iata_settlement","fieldtype":"Link","label":"IATA Settlement","options":"IATA Settlement","read_only":1,"no_copy":1}
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "module": "ESRM Travel",
+ "name": "IATA Adjustment",
+ "permissions": [
+  {"role":"System Manager","cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"submit":1,"write":1},
+  {"role":"ESRM Approver","cancel":1,"create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"submit":1,"write":1},
+  {"role":"ESRM Agent","create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"write":1}
+ ],
+ "search_fields": "ticket_booking,ticket_number,reference_no",
+ "sort_field": "adjustment_date",
+ "sort_order": "DESC",
+ "title_field": "ticket_number",
+ "track_changes": 1
+}

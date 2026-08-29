@@ -42,7 +42,7 @@ class IATASettlement(Document):
         self.populate_eligible_bookings()
         self.calculate_totals()
         if not self.bookings:
-            frappe.throw(_("No unsettled approved IATA bookings exist in this period."))
+            frappe.throw(_("No unsettled IATA bookings or adjustments exist in this period."))
         if not self.deposit_slip:
             frappe.throw(_("Attach the cash deposit slip before submitting."))
         if flt(self.deposit_amount) <= 0:
@@ -58,7 +58,7 @@ class IATASettlement(Document):
     def on_submit(self):
         journal_entry = self.create_journal_entry()
         self.db_set({"journal_entry": journal_entry, "status": "Submitted"})
-        self.mark_bookings_settled()
+        self.mark_entries_settled()
 
     def before_cancel(self):
         if self.journal_entry and frappe.db.exists("Journal Entry", self.journal_entry):
@@ -70,6 +70,18 @@ class IATASettlement(Document):
     def on_cancel(self):
         self.db_set("status", "Cancelled")
         for row in self.bookings:
+            if row.iata_adjustment:
+                current = frappe.db.get_value(
+                    "IATA Adjustment", row.iata_adjustment, "iata_settlement"
+                )
+                if current == self.name:
+                    frappe.db.set_value(
+                        "IATA Adjustment",
+                        row.iata_adjustment,
+                        {"iata_settlement": None, "status": "Unsettled"},
+                        update_modified=False,
+                    )
+                continue
             current = frappe.db.get_value(
                 "Ticket Booking", row.ticket_booking, "iata_settlement"
             )
@@ -123,22 +135,34 @@ class IATASettlement(Document):
         self.difference_amount = flt(self.deposit_amount) - flt(self.expected_total)
 
     def validate_not_already_settled(self):
-        names = [row.ticket_booking for row in self.bookings]
-        if not names:
-            return
-        conflicts = frappe.db.sql(
-            """
-            select name, iata_settlement
-            from `tabTicket Booking`
-            where name in %(names)s
-              and ifnull(iata_settlement, '') not in ('', %(current_settlement)s)
-            """,
-            {"names": names, "current_settlement": self.name},
-            as_dict=True,
-        )
+        booking_names = [row.ticket_booking for row in self.bookings if not row.iata_adjustment]
+        adjustment_names = [row.iata_adjustment for row in self.bookings if row.iata_adjustment]
+        conflicts = []
+        if booking_names:
+            conflicts.extend(frappe.db.sql(
+                """
+                select name, iata_settlement
+                from `tabTicket Booking`
+                where name in %(names)s
+                  and ifnull(iata_settlement, '') not in ('', %(current_settlement)s)
+                """,
+                {"names": booking_names, "current_settlement": self.name},
+                as_dict=True,
+            ))
+        if adjustment_names:
+            conflicts.extend(frappe.db.sql(
+                """
+                select name, iata_settlement
+                from `tabIATA Adjustment`
+                where name in %(names)s
+                  and ifnull(iata_settlement, '') not in ('', %(current_settlement)s)
+                """,
+                {"names": adjustment_names, "current_settlement": self.name},
+                as_dict=True,
+            ))
         if conflicts:
             frappe.throw(
-                _("These bookings are already settled: {0}").format(
+                _("These IATA entries are already settled: {0}").format(
                     ", ".join(f"{row.name} ({row.iata_settlement})" for row in conflicts)
                 )
             )
@@ -151,7 +175,11 @@ class IATASettlement(Document):
             (self.domestic_expense_account, self.domestic_amount),
         ):
             if flt(amount):
-                row = {"account": account, "debit_in_account_currency": flt(amount)}
+                row = {"account": account}
+                if flt(amount) > 0:
+                    row["debit_in_account_currency"] = flt(amount)
+                else:
+                    row["credit_in_account_currency"] = abs(flt(amount))
                 if settings.default_cost_center:
                     row["cost_center"] = settings.default_cost_center
                 accounts.append(row)
@@ -175,8 +203,16 @@ class IATASettlement(Document):
         journal.submit()
         return journal.name
 
-    def mark_bookings_settled(self):
+    def mark_entries_settled(self):
         for row in self.bookings:
+            if row.iata_adjustment:
+                frappe.db.set_value(
+                    "IATA Adjustment",
+                    row.iata_adjustment,
+                    {"iata_settlement": self.name, "status": "Settled"},
+                    update_modified=False,
+                )
+                continue
             frappe.db.set_value(
                 "Ticket Booking",
                 row.ticket_booking,
@@ -191,9 +227,10 @@ def get_eligible_bookings(period_from, period_to, current_settlement=None):
         return []
     if getdate(period_from) > getdate(period_to):
         frappe.throw(_("Issue Date From cannot be after Issue Date To."))
-    return frappe.db.sql(
+    bookings = frappe.db.sql(
         """
         select
+            'Booking' as entry_type, null as iata_adjustment,
             tb.name as ticket_booking, tb.issue_date, tb.travel_type,
             tb.passenger_name, tb.ticket_number, tb.route_summary, tb.iata_amount
         from `tabTicket Booking` tb
@@ -214,4 +251,34 @@ def get_eligible_bookings(period_from, period_to, current_settlement=None):
             "current_settlement": current_settlement or "",
         },
         as_dict=True,
+    )
+    adjustments = frappe.db.sql(
+        """
+        select
+            'Adjustment' as entry_type, adjustment.name as iata_adjustment,
+            adjustment.ticket_booking, adjustment.adjustment_date as issue_date,
+            adjustment.travel_type, adjustment.passenger_name,
+            adjustment.ticket_number, tb.route_summary,
+            adjustment.adjustment_amount as iata_amount
+        from `tabIATA Adjustment` adjustment
+        inner join `tabTicket Booking` tb on tb.name = adjustment.ticket_booking
+        where adjustment.docstatus = 1
+          and ifnull(adjustment.adjustment_amount, 0) != 0
+          and adjustment.adjustment_date between %(period_from)s and %(period_to)s
+          and (
+              ifnull(adjustment.iata_settlement, '') = ''
+              or adjustment.iata_settlement = %(current_settlement)s
+          )
+        order by adjustment.adjustment_date, adjustment.name
+        """,
+        {
+            "period_from": period_from,
+            "period_to": period_to,
+            "current_settlement": current_settlement or "",
+        },
+        as_dict=True,
+    )
+    return sorted(
+        bookings + adjustments,
+        key=lambda row: (getdate(row.issue_date), row.ticket_booking, row.iata_adjustment or ""),
     )
