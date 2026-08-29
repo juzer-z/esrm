@@ -47,6 +47,7 @@ def get_data(filters):
     return frappe.db.sql(
         """
         select
+            'Booking' as entry_type,
             tb.name, tb.issue_date, tb.passenger_name, tb.ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
             tb.gross_amount, tb.invoice_amount, tb.iata_amount,
@@ -57,7 +58,19 @@ def get_data(filters):
           and tb.approval_status = 'Approved'
           and tb.payment_mode = 'IATA'
           and tb.issue_date between %(from_date)s and %(to_date)s
-        order by tb.issue_date, tb.name
+        union all
+        select
+            'Adjustment' as entry_type,
+            tb.name, adj.adjustment_date as issue_date, tb.passenger_name, tb.ticket_number,
+            tb.pnr, tb.route_summary, tb.airline, tb.customer,
+            0 as gross_amount, 0 as invoice_amount, adj.adjustment_amount as iata_amount,
+            'IATA Credit' as invoice_status
+        from `tabIATA Adjustment` adj
+        inner join `tabTicket Booking` tb on tb.name = adj.ticket_booking
+        where adj.docstatus = 1
+          and adj.status in ('Unsettled', 'Settled')
+          and adj.adjustment_date between %(from_date)s and %(to_date)s
+        order by issue_date, name, entry_type desc
         """,
         filters,
         as_dict=True,
@@ -65,11 +78,12 @@ def get_data(filters):
 
 
 def get_summary(data):
+    booking_rows = [row for row in data if row.entry_type == "Booking"]
     return [
-        {"label": _("Approved IATA Bookings"), "value": len(data), "datatype": "Int", "indicator": "Blue"},
+        {"label": _("Approved IATA Bookings"), "value": len(booking_rows), "datatype": "Int", "indicator": "Blue"},
         {"label": _("Gross Amount"), "value": sum(row.gross_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Invoice Amount"), "value": sum(row.invoice_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
-        {"label": _("IATA Amount"), "value": sum(row.iata_amount or 0 for row in data), "datatype": "Currency", "indicator": "Blue"},
+        {"label": _("Net IATA Amount"), "value": sum(row.iata_amount or 0 for row in data), "datatype": "Currency", "indicator": "Blue"},
     ]
 
 
@@ -79,6 +93,7 @@ def _verification_code(filters, data):
         "to_date": str(filters.to_date),
         "rows": [
             [
+                row.entry_type,
                 row.name,
                 str(row.issue_date),
                 str(row.invoice_amount or 0),
@@ -101,6 +116,7 @@ def download_verified_pdf(from_date, to_date):
     generated_at = now_datetime()
     context = {
         "rows": data,
+        "booking_count": sum(1 for row in data if row.entry_type == "Booking"),
         "from_date": formatdate(filters.from_date, "dd MMM yyyy"),
         "to_date": formatdate(filters.to_date, "dd MMM yyyy"),
         "total_gross": sum(row.gross_amount or 0 for row in data),
