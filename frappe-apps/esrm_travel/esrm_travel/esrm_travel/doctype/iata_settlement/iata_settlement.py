@@ -81,6 +81,13 @@ class IATASettlement(Document):
                         {"iata_settlement": None, "status": "Unsettled"},
                         update_modified=False,
                     )
+                    frappe.db.set_value(
+                        "Ticket Booking",
+                        row.ticket_booking,
+                        "iata_adjustment_status",
+                        "Ready for Settlement",
+                        update_modified=False,
+                    )
                 continue
             current = frappe.db.get_value(
                 "Ticket Booking", row.ticket_booking, "iata_settlement"
@@ -210,6 +217,13 @@ class IATASettlement(Document):
                     "IATA Adjustment",
                     row.iata_adjustment,
                     {"iata_settlement": self.name, "status": "Settled"},
+                    update_modified=False,
+                )
+                frappe.db.set_value(
+                    "Ticket Booking",
+                    row.ticket_booking,
+                    "iata_adjustment_status",
+                    "Settled",
                     update_modified=False,
                 )
                 continue

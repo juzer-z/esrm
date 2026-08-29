@@ -13,6 +13,13 @@ frappe.ui.form.on("Ticket Booking", {
         calculate_profitability(frm);
     },
 
+    iata_credit_amount(frm) {
+        frm.set_value(
+            "net_iata_cost",
+            flt(frm.doc.iata_amount) - flt(frm.doc.iata_credit_amount)
+        );
+    },
+
     supplier_cost(frm) {
         calculate_profitability(frm);
     },
@@ -156,6 +163,20 @@ function set_approved_cost_permissions(frm) {
         "read_only",
         !(is_owner && !is_iata)
     );
+    const can_enter_iata_credit = (
+        is_owner
+        && is_iata
+        && frm.doc.cancellation_status !== "Active"
+        && !frm.doc.iata_adjustment
+    );
+    for (const fieldname of [
+        "iata_credit_amount",
+        "iata_adjustment_date",
+        "iata_adjustment_reference",
+        "iata_adjustment_attachment",
+    ]) {
+        frm.set_df_property(fieldname, "read_only", !can_enter_iata_credit);
+    }
 }
 
 const ADMINISTRATOR_AMENDMENT_FIELDS = [
@@ -316,6 +337,38 @@ function add_ticket_cancellation_action(frm) {
                         label: __("Cancellation Reason"),
                         reqd: 1,
                     },
+                    {
+                        fieldname: "iata_credit_section",
+                        fieldtype: "Section Break",
+                        label: __("IATA Credit (optional — can be entered later)"),
+                        hidden: frm.doc.payment_mode !== "IATA",
+                    },
+                    {
+                        fieldname: "iata_credit_amount",
+                        fieldtype: "Currency",
+                        label: __("IATA Refund / Credit Amount"),
+                        description: __("Enter a positive amount. Leave blank if the IATA credit is not known yet."),
+                        hidden: frm.doc.payment_mode !== "IATA",
+                    },
+                    {
+                        fieldname: "iata_adjustment_date",
+                        fieldtype: "Date",
+                        label: __("IATA Adjustment Date"),
+                        default: frappe.datetime.get_today(),
+                        hidden: frm.doc.payment_mode !== "IATA",
+                    },
+                    {
+                        fieldname: "iata_adjustment_reference",
+                        fieldtype: "Data",
+                        label: __("IATA Statement Reference"),
+                        hidden: frm.doc.payment_mode !== "IATA",
+                    },
+                    {
+                        fieldname: "iata_adjustment_attachment",
+                        fieldtype: "Attach",
+                        label: __("IATA Supporting Document"),
+                        hidden: frm.doc.payment_mode !== "IATA",
+                    },
                 ],
                 primary_action_label: __("Create Draft Credit Note"),
                 primary_action(values) {
@@ -334,6 +387,10 @@ function add_ticket_cancellation_action(frm) {
                             cancellation_fee: fee,
                             cancellation_date: values.cancellation_date,
                             cancellation_reason: values.cancellation_reason,
+                            iata_credit_amount: values.iata_credit_amount,
+                            iata_adjustment_date: values.iata_adjustment_date,
+                            iata_adjustment_reference: values.iata_adjustment_reference,
+                            iata_adjustment_attachment: values.iata_adjustment_attachment,
                         },
                         freeze: true,
                         freeze_message: __("Creating Credit Note..."),

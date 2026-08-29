@@ -70,10 +70,26 @@ def create_submitted_adjustment(
     adjustment_date=None,
     reference_no=None,
     remarks=None,
+    attachment=None,
 ):
-    if frappe.session.user != "Administrator" and "ESRM Approver" not in frappe.get_roles():
+    booking_access = frappe.db.get_value(
+        "Ticket Booking",
+        ticket_booking,
+        ["booking_owner", "cancellation_status"],
+        as_dict=True,
+    )
+    can_submit = (
+        frappe.session.user == "Administrator"
+        or "ESRM Approver" in frappe.get_roles()
+        or (
+            booking_access
+            and booking_access.booking_owner == frappe.session.user
+            and booking_access.cancellation_status != "Active"
+        )
+    )
+    if not can_submit:
         frappe.throw(
-            _("Only Administrator or an ESRM Approver can submit an IATA Adjustment."),
+            _("Only the booking owner, Administrator, or an ESRM Approver can record this IATA credit."),
             frappe.PermissionError,
         )
     amount = flt(adjustment_amount)
@@ -88,6 +104,7 @@ def create_submitted_adjustment(
             "adjustment_amount": amount,
             "reference_no": reference_no,
             "remarks": remarks,
+            "attachment": attachment,
         }
     )
     adjustment.insert(ignore_permissions=True)

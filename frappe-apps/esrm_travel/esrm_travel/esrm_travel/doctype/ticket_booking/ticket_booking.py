@@ -33,6 +33,15 @@ AUTOMATIC_AFTER_SUBMIT_FIELDS = {
     "net_credit_amount",
     "revised_invoice_amount",
     "credit_note",
+    "iata_adjustment_status",
+    "iata_adjustment",
+    "net_iata_cost",
+}
+IATA_ADJUSTMENT_INPUT_FIELDS = {
+    "iata_credit_amount",
+    "iata_adjustment_date",
+    "iata_adjustment_reference",
+    "iata_adjustment_attachment",
 }
 INVOICE_BOUND_FIELDS = {
     "customer",
@@ -141,6 +150,7 @@ class TicketBooking(Document):
         )
 
     def on_update_after_submit(self):
+        self.sync_iata_adjustment()
         if getattr(self, "_administrator_amendment_fields", None):
             labels = [
                 self.meta.get_label(fieldname) or fieldname
@@ -178,7 +188,10 @@ class TicketBooking(Document):
             and self.has_value_changed(field.fieldname)
         }
         substantive_changes = sorted(
-            changed_fields - AMENDMENT_AUDIT_FIELDS - AUTOMATIC_AFTER_SUBMIT_FIELDS
+            changed_fields
+            - AMENDMENT_AUDIT_FIELDS
+            - AUTOMATIC_AFTER_SUBMIT_FIELDS
+            - IATA_ADJUSTMENT_INPUT_FIELDS
         )
         if not substantive_changes:
             return
@@ -422,6 +435,12 @@ class TicketBooking(Document):
             and self.return_date
         ):
             allowed_changes.add("return_date")
+        if (
+            previous.payment_mode == "IATA"
+            and not previous.iata_adjustment
+            and flt(self.iata_credit_amount) > 0
+        ):
+            allowed_changes.update(IATA_ADJUSTMENT_INPUT_FIELDS)
         restricted_changes = [
             field.fieldname
             for field in self.meta.fields
@@ -440,6 +459,52 @@ class TicketBooking(Document):
             )
 
         self.cost_entered_by_owner = 1
+
+    def sync_iata_adjustment(self):
+        if self.payment_mode != "IATA" or flt(self.iata_credit_amount) <= 0:
+            return
+        if self.iata_adjustment:
+            existing = frappe.get_doc("IATA Adjustment", self.iata_adjustment)
+            unchanged = (
+                abs(flt(existing.adjustment_amount) + flt(self.iata_credit_amount)) < 0.005
+                and existing.adjustment_date == self.iata_adjustment_date
+                and (existing.reference_no or "") == (self.iata_adjustment_reference or "")
+                and (existing.attachment or "") == (self.iata_adjustment_attachment or "")
+            )
+            if unchanged:
+                return
+            if frappe.session.user != "Administrator":
+                frappe.throw(_("Only Administrator can correct a recorded IATA credit."))
+            if existing.iata_settlement:
+                frappe.throw(
+                    _("Cancel IATA Settlement {0} before correcting this credit.").format(
+                        existing.iata_settlement
+                    )
+                )
+            existing.flags.ignore_permissions = True
+            existing.cancel()
+        if not self.iata_adjustment_date:
+            frappe.throw(_("Enter the IATA Adjustment Date."))
+
+        from esrm_travel.esrm_travel.doctype.iata_adjustment.iata_adjustment import (
+            create_submitted_adjustment,
+        )
+
+        adjustment_name = create_submitted_adjustment(
+            ticket_booking=self.name,
+            adjustment_amount=-flt(self.iata_credit_amount),
+            adjustment_date=self.iata_adjustment_date,
+            reference_no=self.iata_adjustment_reference,
+            remarks=_("IATA credit recorded from Ticket Booking {0}").format(self.name),
+            attachment=self.iata_adjustment_attachment,
+        )
+        self.db_set(
+            {
+                "iata_adjustment": adjustment_name,
+                "iata_adjustment_status": "Ready for Settlement",
+                "net_iata_cost": flt(self.iata_amount) - flt(self.iata_credit_amount),
+            }
+        )
 
     def child_table_has_changed(self, previous, table_field):
         child_meta = frappe.get_meta(table_field.options)
@@ -474,6 +539,11 @@ class TicketBooking(Document):
             if value < 0:
                 frappe.throw(_("{0} cannot be negative.").format(self.meta.get_label(fieldname)))
 
+        if flt(self.iata_credit_amount) < 0:
+            frappe.throw(_("IATA Refund / Credit Amount cannot be negative."))
+        if flt(self.iata_credit_amount) > flt(self.iata_amount):
+            frappe.throw(_("IATA Refund / Credit Amount cannot exceed the original IATA Amount."))
+
         if flt(self.paid_amount) > flt(self.invoice_amount) and flt(self.invoice_amount) > 0:
             frappe.throw(_("Paid Amount cannot be greater than Invoice Amount."))
 
@@ -482,6 +552,7 @@ class TicketBooking(Document):
         iata_amount = flt(self.iata_amount)
         supplier_cost = flt(self.supplier_cost)
         invoice_amount = flt(self.invoice_amount)
+        self.net_iata_cost = iata_amount - flt(self.iata_credit_amount)
 
         if self.payment_mode == "IATA":
             self.commission = gross_amount - iata_amount
@@ -635,7 +706,8 @@ def make_sales_invoice(source_name):
 @frappe.whitelist()
 def create_ticket_credit_note(
     source_name, refund_amount, cancellation_fee=0, cancellation_date=None,
-    cancellation_reason=None
+    cancellation_reason=None, iata_credit_amount=0, iata_adjustment_date=None,
+    iata_adjustment_reference=None, iata_adjustment_attachment=None
 ):
     """Create a draft credit note for one ticket on a submitted Sales Invoice."""
     if frappe.session.user != "Administrator":
@@ -689,6 +761,37 @@ def create_ticket_credit_note(
         "revised_invoice_amount": revised_amount,
         "status": "Cancelled",
     }
+    if booking.payment_mode == "IATA" and not booking.iata_adjustment:
+        cancellation_values["iata_adjustment_status"] = "Pending"
+        iata_credit_amount = flt(iata_credit_amount)
+        if iata_credit_amount > 0:
+            from esrm_travel.esrm_travel.doctype.iata_adjustment.iata_adjustment import (
+                create_submitted_adjustment,
+            )
+
+            adjustment_name = create_submitted_adjustment(
+                ticket_booking=booking.name,
+                adjustment_amount=-iata_credit_amount,
+                adjustment_date=iata_adjustment_date or cancellation_date or nowdate(),
+                reference_no=iata_adjustment_reference,
+                remarks=_("IATA credit recorded during cancellation of {0}").format(
+                    booking.name
+                ),
+                attachment=iata_adjustment_attachment,
+            )
+            cancellation_values.update(
+                {
+                    "iata_credit_amount": iata_credit_amount,
+                    "iata_adjustment_date": iata_adjustment_date
+                    or cancellation_date
+                    or nowdate(),
+                    "iata_adjustment_reference": iata_adjustment_reference,
+                    "iata_adjustment_attachment": iata_adjustment_attachment,
+                    "iata_adjustment": adjustment_name,
+                    "iata_adjustment_status": "Ready for Settlement",
+                    "net_iata_cost": flt(booking.iata_amount) - iata_credit_amount,
+                }
+            )
 
     if original_invoice.docstatus == 0:
         revise_draft_invoice_for_cancellation(

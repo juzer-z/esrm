@@ -26,9 +26,7 @@
  "module": "ESRM Travel",
  "name": "IATA Adjustment",
  "permissions": [
-  {"role":"System Manager","cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"submit":1,"write":1},
-  {"role":"ESRM Approver","cancel":1,"create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"submit":1,"write":1},
-  {"role":"ESRM Agent","create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"write":1}
+  {"role":"System Manager","cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"share":1,"submit":1,"write":1}
  ],
  "search_fields": "ticket_booking,ticket_number,reference_no",
  "sort_field": "adjustment_date",
