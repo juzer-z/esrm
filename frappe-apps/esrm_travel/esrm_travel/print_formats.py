@@ -538,14 +538,19 @@ ESRM_TICKET_INVOICE_HTML = """
         white-space: nowrap;
     }
     .esrm-ticket-table .passenger {
-        overflow-wrap: anywhere;
+        overflow-wrap: normal;
+        word-break: normal;
         text-align: left;
     }
     .esrm-ticket-table .remarks {
-        font-size: 7pt;
+        font-size: 6.7pt;
         line-height: 1.12;
-        overflow-wrap: anywhere;
+        overflow-wrap: normal;
         text-align: left;
+        word-break: normal;
+    }
+    .esrm-ticket-table .status-remark {
+        white-space: nowrap;
     }
     .esrm-visa-table th {
         font-size: 6.4pt;
@@ -798,11 +803,11 @@ ESRM_TICKET_INVOICE_HTML = """
         {% else %}
         <colgroup>
             <col style="width: 4%;">
-            <col style="width: 11%;">
-            <col style="width: 20%;">
-            <col style="width: 16%;">
-            <col style="width: 11%;">
-            <col style="width: 8%;">
+            <col style="width: 10%;">
+            <col style="width: 19%;">
+            <col style="width: 17%;">
+            <col style="width: 13%;">
+            <col style="width: 7%;">
             <col style="width: 15%;">
             <col style="width: 15%;">
         </colgroup>
@@ -814,7 +819,7 @@ ESRM_TICKET_INVOICE_HTML = """
                 <th>Ticket No.</th>
                 <th>Route</th>
                 <th>Airline</th>
-                <th class="center">Amount</th>
+                <th class="center">Amount ({{ doc.currency or "BDT" }})</th>
                 <th>Remarks</th>
             </tr>
         </thead>
@@ -827,13 +832,13 @@ ESRM_TICKET_INVOICE_HTML = """
                 <td class="ticket-number">{{ ticket.ticket_number or "" }}</td>
                 <td class="route center">{{ ticket.route or "" }}</td>
                 <td class="center">{{ ticket.carrier or "" }}</td>
-                <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(ticket.fare or 0) }}</td>
-                <td class="remarks">{{ ticket.remarks or "" }}</td>
+                <td class="amount">{{ "{:,.2f}".format(ticket.fare or 0) }}</td>
+                <td class="remarks"><span{% if ticket.remarks in ["REFUND", "CANCELLATION FEE", "CANCELLED / REFUND"] %} class="status-remark"{% endif %}>{{ ticket.remarks or "" }}</span></td>
             </tr>
             {% endfor %}
             <tr class="esrm-total-row">
                 <td colspan="6" class="amount">Total</td>
-                <td class="amount">{{ doc.currency or "BDT" }} {{ "{:,.2f}".format(invoice_total) }}</td>
+                <td class="amount">{{ "{:,.2f}".format(invoice_total) }}</td>
                 <td></td>
             </tr>
         </tbody>
