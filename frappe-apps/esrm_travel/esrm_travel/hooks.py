@@ -21,6 +21,7 @@ app_include_js = ["/assets/esrm_travel/js/approval_notification_refresh.js?v=esr
 
 doctype_js = {
     "Customer": "public/js/customer.js",
+    "Payment Entry": "public/js/payment_entry.js",
     "Sales Invoice": "public/js/sales_invoice.js",
 }
 
