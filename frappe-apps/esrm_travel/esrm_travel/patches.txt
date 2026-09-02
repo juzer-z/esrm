@@ -1,1 +1,2 @@
 esrm_travel.patches.v1_0.set_recommended_notification_email_defaults
+esrm_travel.patches.v1_0.migrate_draft_iata_settlement_inputs

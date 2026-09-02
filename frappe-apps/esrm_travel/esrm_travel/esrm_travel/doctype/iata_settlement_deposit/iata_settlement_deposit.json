@@ -1,0 +1,12 @@
+{
+ "actions": [], "doctype":"DocType", "editable_grid":1, "engine":"InnoDB",
+ "field_order":["deposit_date","reference_no","source_account","amount","deposit_slip"],
+ "fields":[
+  {"default":"Today","fieldname":"deposit_date","fieldtype":"Date","label":"Deposit Date","reqd":1,"in_list_view":1},
+  {"fieldname":"reference_no","fieldtype":"Data","label":"Deposit Slip / Reference No.","reqd":1,"in_list_view":1},
+  {"fieldname":"source_account","fieldtype":"Link","label":"Paid From","options":"Account","reqd":1,"in_list_view":1},
+  {"fieldname":"amount","fieldtype":"Currency","label":"Amount","reqd":1,"in_list_view":1},
+  {"fieldname":"deposit_slip","fieldtype":"Attach","label":"Deposit Slip","reqd":1}
+ ],
+ "istable":1,"module":"ESRM Travel","name":"IATA Settlement Deposit","permissions":[]
+}

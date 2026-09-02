@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import flt, getdate, nowdate
+from frappe.utils import flt, getdate
 
 
 COMPANY = "Ezzy Services & Resource Management"
@@ -18,36 +18,36 @@ class IATASettlement(Document):
 
     def before_validate(self):
         self.company = self.company or COMPANY
-        self.source_account = self.source_account or PETTY_CASH_ACCOUNT
         self.international_expense_account = (
             self.international_expense_account or INTERNATIONAL_EXPENSE_ACCOUNT
         )
         self.domestic_expense_account = (
             self.domestic_expense_account or DOMESTIC_EXPENSE_ACCOUNT
         )
-        self.deposit_date = self.deposit_date or nowdate()
         self.currency = (
             frappe.db.get_value("Company", self.company, "default_currency") or "BDT"
         )
         if self.docstatus == 0 and self.period_from and self.period_to:
             self.populate_eligible_bookings()
+            self.populate_eligible_memos()
 
     def validate(self):
         self.validate_period()
         self.validate_accounts()
-        self.validate_memos()
+        self.validate_registered_memos()
+        self.validate_deposits()
         self.calculate_totals()
-        self.status = "Draft" if self.docstatus == 0 else self.status
+        if self.docstatus == 0:
+            self.status = "Ready to Submit" if abs(flt(self.difference_amount)) <= 0.01 and self.deposits else ("Partially Deposited" if self.deposits else "Draft")
 
     def before_submit(self):
         self.populate_eligible_bookings()
+        self.populate_eligible_memos()
         self.calculate_totals()
-        if not self.bookings:
-            frappe.throw(_("No unsettled IATA bookings or adjustments exist in this period."))
-        if not self.deposit_slip:
-            frappe.throw(_("Attach the cash deposit slip before submitting."))
+        if not self.bookings and not self.registered_memos:
+            frappe.throw(_("No unsettled IATA bookings, adjustments, or memos exist in this period."))
         if flt(self.deposit_amount) <= 0:
-            frappe.throw(_("Cash Deposited must be greater than zero."))
+            frappe.throw(_("Total Deposited must be greater than zero."))
         if abs(flt(self.difference_amount)) > 0.01:
             frappe.throw(
                 _("Cash Deposited must equal the Expected IATA Total. Difference: {0}").format(
@@ -100,6 +100,9 @@ class IATASettlement(Document):
                     {"iata_settlement": None, "iata_settlement_status": "Unsettled"},
                     update_modified=False,
                 )
+        for row in self.registered_memos:
+            if frappe.db.get_value("IATA Memo", row.iata_memo, "iata_settlement") == self.name:
+                frappe.db.set_value("IATA Memo", row.iata_memo, {"iata_settlement": None, "status": "Unsettled"}, update_modified=False)
 
     def validate_period(self):
         if self.period_from and self.period_to and getdate(self.period_from) > getdate(self.period_to):
@@ -107,7 +110,6 @@ class IATASettlement(Document):
 
     def validate_accounts(self):
         checks = (
-            (self.source_account, "Asset", _("Paid From")),
             (self.international_expense_account, "Expense", _("International Ticket Expense")),
             (self.domestic_expense_account, "Expense", _("Domestic Ticket Expense")),
         )
@@ -129,52 +131,50 @@ class IATASettlement(Document):
             )
             self.append("bookings", row)
         self.calculate_totals()
-        if not flt(self.deposit_amount):
-            self.deposit_amount = self.expected_total
+
+    def populate_eligible_memos(self):
+        self.set("registered_memos", [])
+        for row in get_eligible_memos(self.period_from, self.period_to, self.name):
+            self.append("registered_memos", row)
+        self.calculate_totals()
 
     def calculate_totals(self):
+        legacy_deposit_amount = flt(self.deposit_amount)
         self.domestic_amount = sum(
             flt(row.iata_amount) for row in self.bookings if row.travel_type == "Domestic"
         )
         self.international_amount = sum(
             flt(row.iata_amount) for row in self.bookings if row.travel_type != "Domestic"
         )
-        self.international_amount += sum(flt(row.amount) for row in self.memos)
+        self.domestic_amount += sum(flt(row.amount) for row in self.registered_memos if row.travel_type == "Domestic")
+        self.international_amount += sum(flt(row.amount) for row in self.registered_memos if row.travel_type != "Domestic")
+        # Preserve historical submitted settlements that stored memos inline.
+        if not self.registered_memos:
+            self.international_amount += sum(flt(row.amount) for row in self.memos)
         self.expected_total = flt(self.domestic_amount) + flt(self.international_amount)
+        self.deposit_amount = sum(flt(row.amount) for row in self.deposits)
+        if not self.deposits and self.docstatus > 0:
+            self.deposit_amount = legacy_deposit_amount
         self.difference_amount = flt(self.deposit_amount) - flt(self.expected_total)
 
-    def validate_memos(self):
-        seen = set()
-        for row in self.memos:
-            key = (row.memo_type, (row.memo_number or "").strip())
-            if key in seen:
-                frappe.throw(_("Duplicate IATA memo {0}.").format(row.memo_number))
-            seen.add(key)
-            if row.memo_date and not (getdate(self.period_from) <= getdate(row.memo_date) <= getdate(self.period_to)):
-                frappe.throw(_("Memo {0} date must be within the settlement period.").format(row.memo_number))
-            if row.memo_type == "ACM" and flt(row.amount) >= 0:
-                frappe.throw(_("ACM {0} must have a negative amount.").format(row.memo_number))
-            if row.memo_type == "ADM" and flt(row.amount) <= 0:
-                frappe.throw(_("ADM {0} must have a positive amount.").format(row.memo_number))
-            duplicate = frappe.db.sql(
-                """
-                select memo.parent
-                from `tabIATA Settlement Memo` memo
-                inner join `tabIATA Settlement` settlement on settlement.name = memo.parent
-                where memo.memo_type = %(memo_type)s
-                  and memo.memo_number = %(memo_number)s
-                  and memo.parent != %(current)s
-                  and settlement.docstatus < 2
-                limit 1
-                """,
-                {"memo_type": row.memo_type, "memo_number": row.memo_number, "current": self.name or ""},
-            )
-            if duplicate:
-                frappe.throw(_("IATA memo {0} is already recorded in {1}.").format(row.memo_number, duplicate[0][0]))
+    def validate_registered_memos(self):
+        if len({row.iata_memo for row in self.registered_memos}) != len(self.registered_memos):
+            frappe.throw(_("The same IATA memo cannot be included twice."))
+
+    def validate_deposits(self):
+        for row in self.deposits:
+            if flt(row.amount) <= 0:
+                frappe.throw(_("Every deposit amount must be greater than zero."))
+            if not row.deposit_slip:
+                frappe.throw(_("Attach the deposit slip for reference {0}.").format(row.reference_no))
+            values = frappe.db.get_value("Account", row.source_account, ["company", "root_type", "is_group", "disabled"], as_dict=True)
+            if not values or values.company != self.company or values.root_type != "Asset" or values.is_group or values.disabled:
+                frappe.throw(_("Paid From account {0} must be an active asset account for this company.").format(row.source_account))
 
     def validate_not_already_settled(self):
         booking_names = [row.ticket_booking for row in self.bookings if not row.iata_adjustment]
         adjustment_names = [row.iata_adjustment for row in self.bookings if row.iata_adjustment]
+        memo_names = [row.iata_memo for row in self.registered_memos]
         conflicts = []
         if booking_names:
             conflicts.extend(frappe.db.sql(
@@ -204,6 +204,10 @@ class IATASettlement(Document):
                     ", ".join(f"{row.name} ({row.iata_settlement})" for row in conflicts)
                 )
             )
+        if memo_names:
+            memo_conflicts = frappe.get_all("IATA Memo", filters={"name": ["in", memo_names], "iata_settlement": ["not in", ["", self.name]]}, fields=["name", "iata_settlement"])
+            if memo_conflicts:
+                frappe.throw(_("These IATA memos are already settled: {0}").format(", ".join(f"{row.name} ({row.iata_settlement})" for row in memo_conflicts)))
 
     def create_journal_entry(self):
         settings = frappe.get_single("ESRM Travel Settings")
@@ -221,17 +225,20 @@ class IATASettlement(Document):
                 if settings.default_cost_center:
                     row["cost_center"] = settings.default_cost_center
                 accounts.append(row)
-        accounts.append(
-            {"account": self.source_account, "credit_in_account_currency": flt(self.deposit_amount)}
-        )
+        for deposit in self.deposits:
+            accounts.append({"account": deposit.source_account, "credit_in_account_currency": flt(deposit.amount)})
+        if not self.deposits:
+            accounts.append({"account": self.source_account, "credit_in_account_currency": flt(self.deposit_amount)})
+        posting_date = max((getdate(row.deposit_date) for row in self.deposits), default=getdate(self.deposit_date))
+        references = ", ".join(row.reference_no for row in self.deposits) or self.reference_no
         journal = frappe.get_doc(
             {
                 "doctype": "Journal Entry",
                 "voucher_type": "Journal Entry",
                 "company": self.company,
-                "posting_date": self.deposit_date,
+                "posting_date": posting_date,
                 "user_remark": _("IATA cash settlement {0}, period {1} to {2}, reference {3}").format(
-                    self.name, self.period_from, self.period_to, self.reference_no
+                    self.name, self.period_from, self.period_to, references
                 ),
                 "accounts": accounts,
             }
@@ -264,6 +271,8 @@ class IATASettlement(Document):
                 {"iata_settlement": self.name, "iata_settlement_status": "Settled"},
                 update_modified=False,
             )
+        for row in self.registered_memos:
+            frappe.db.set_value("IATA Memo", row.iata_memo, {"iata_settlement": self.name, "status": "Settled"}, update_modified=False)
 
 
 @frappe.whitelist()
@@ -326,4 +335,26 @@ def get_eligible_bookings(period_from, period_to, current_settlement=None):
     return sorted(
         bookings + adjustments,
         key=lambda row: (getdate(row.issue_date), row.ticket_booking, row.iata_adjustment or ""),
+    )
+
+
+@frappe.whitelist()
+def get_eligible_memos(period_from, period_to, current_settlement=None):
+    if not period_from or not period_to:
+        return []
+    if getdate(period_from) > getdate(period_to):
+        frappe.throw(_("Issue Date From cannot be after Issue Date To."))
+    return frappe.db.sql(
+        """
+        select name as iata_memo, memo_type, memo_number, memo_date,
+               airline_code, travel_type, amount
+        from `tabIATA Memo`
+        where docstatus = 1
+          and status in ('Unsettled', 'Settled')
+          and memo_date between %(period_from)s and %(period_to)s
+          and (ifnull(iata_settlement, '') = '' or iata_settlement = %(current)s)
+        order by memo_date, memo_type, memo_number
+        """,
+        {"period_from": period_from, "period_to": period_to, "current": current_settlement or ""},
+        as_dict=True,
     )

@@ -72,18 +72,31 @@ def get_data(filters):
           and adj.adjustment_date between %(from_date)s and %(to_date)s
         union all
         select
-            memo.memo_type as entry_type,
-            memo.memo_number as name, memo.memo_date as issue_date,
+            memo.memo_type as entry_type, memo.memo_number as name,
+            memo.memo_date as issue_date,
             concat(memo.memo_type, ' - Airline ', coalesce(nullif(memo.airline_code, ''), 'N/A')) as passenger_name,
-            '' as ticket_number, '' as pnr, '' as route_summary,
+            coalesce(memo.ticket_number, '') as ticket_number, '' as pnr, '' as route_summary,
             memo.airline_code as airline, '' as customer,
             0 as gross_amount, 0 as invoice_amount, memo.amount as iata_amount,
-            concat(memo.memo_type, ' Credit') as invoice_status
-        from `tabIATA Settlement Memo` memo
-        inner join `tabIATA Settlement` settlement on settlement.name = memo.parent
-        where memo.parenttype = 'IATA Settlement'
-          and settlement.docstatus < 2
+            case when memo.status = 'Settled' then concat(memo.memo_type, ' - Settled') else concat(memo.memo_type, ' - Unsettled') end as invoice_status
+        from `tabIATA Memo` memo
+        where memo.docstatus = 1
+          and memo.status in ('Unsettled', 'Settled')
           and memo.memo_date between %(from_date)s and %(to_date)s
+        union all
+        select
+            legacy.memo_type as entry_type, legacy.memo_number as name,
+            legacy.memo_date as issue_date,
+            concat(legacy.memo_type, ' - Legacy Settlement Memo') as passenger_name,
+            '' as ticket_number, '' as pnr, '' as route_summary,
+            legacy.airline_code as airline, '' as customer,
+            0 as gross_amount, 0 as invoice_amount, legacy.amount as iata_amount,
+            concat(legacy.memo_type, ' - Legacy') as invoice_status
+        from `tabIATA Settlement Memo` legacy
+        inner join `tabIATA Settlement` settlement on settlement.name = legacy.parent
+        where legacy.parenttype = 'IATA Settlement'
+          and settlement.docstatus < 2
+          and legacy.memo_date between %(from_date)s and %(to_date)s
         order by issue_date, name, entry_type desc
         """,
         filters,
@@ -93,8 +106,10 @@ def get_data(filters):
 
 def get_summary(data):
     booking_rows = [row for row in data if row.entry_type == "Booking"]
+    memo_rows = [row for row in data if row.entry_type in ("ACM", "ADM")]
     return [
         {"label": _("Approved IATA Bookings"), "value": len(booking_rows), "datatype": "Int", "indicator": "Blue"},
+        {"label": _("ACM / ADM Memos"), "value": len(memo_rows), "datatype": "Int", "indicator": "Orange"},
         {"label": _("Gross Amount"), "value": sum(row.gross_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Invoice Amount"), "value": sum(row.invoice_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Net IATA Amount"), "value": sum(row.iata_amount or 0 for row in data), "datatype": "Currency", "indicator": "Blue"},
@@ -131,6 +146,7 @@ def download_verified_pdf(from_date, to_date):
     context = {
         "rows": data,
         "booking_count": sum(1 for row in data if row.entry_type == "Booking"),
+        "memo_count": sum(1 for row in data if row.entry_type in ("ACM", "ADM")),
         "from_date": formatdate(filters.from_date, "dd MMM yyyy"),
         "to_date": formatdate(filters.to_date, "dd MMM yyyy"),
         "total_gross": sum(row.gross_amount or 0 for row in data),

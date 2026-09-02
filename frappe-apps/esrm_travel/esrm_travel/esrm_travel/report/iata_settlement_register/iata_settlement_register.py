@@ -8,23 +8,24 @@ def execute(filters=None):
     conditions = []
     values = {}
     if filters.get("from_date"):
-        conditions.append("settlement.deposit_date >= %(from_date)s")
+        conditions.append("coalesce(deposit.last_deposit_date, settlement.deposit_date) >= %(from_date)s")
         values["from_date"] = getdate(filters.from_date)
     if filters.get("to_date"):
-        conditions.append("settlement.deposit_date <= %(to_date)s")
+        conditions.append("coalesce(deposit.last_deposit_date, settlement.deposit_date) <= %(to_date)s")
         values["to_date"] = getdate(filters.to_date)
     if filters.get("status"):
         conditions.append("settlement.status = %(status)s")
         values["status"] = filters.status
     if filters.get("source_account"):
-        conditions.append("settlement.source_account = %(source_account)s")
-        values["source_account"] = filters.source_account
+        conditions.append("coalesce(deposit.source_accounts, settlement.source_account) like %(source_account)s")
+        values["source_account"] = f"%{filters.source_account}%"
     where = " and " + " and ".join(conditions) if conditions else ""
     data = frappe.db.sql(
         f"""
         select settlement.name, settlement.period_from, settlement.period_to,
-               settlement.deposit_date, settlement.reference_no,
-               settlement.source_account, settlement.international_amount,
+               coalesce(deposit.last_deposit_date, settlement.deposit_date) as deposit_date,
+               coalesce(deposit.references, settlement.reference_no) as reference_no,
+               coalesce(deposit.source_accounts, settlement.source_account) as source_account, settlement.international_amount,
                settlement.domestic_amount, settlement.expected_total,
                settlement.deposit_amount, settlement.difference_amount,
                settlement.status, settlement.journal_entry,
@@ -36,8 +37,16 @@ def execute(filters=None):
             where parenttype = 'IATA Settlement'
             group by parent
         ) booking on booking.parent = settlement.name
+        left join (
+            select parent, max(deposit_date) as last_deposit_date,
+                   group_concat(reference_no order by deposit_date separator ', ') as `references`,
+                   group_concat(distinct source_account order by source_account separator ', ') as source_accounts
+            from `tabIATA Settlement Deposit`
+            where parenttype = 'IATA Settlement'
+            group by parent
+        ) deposit on deposit.parent = settlement.name
         where 1=1 {where}
-        order by settlement.deposit_date desc, settlement.name desc
+        order by coalesce(deposit.last_deposit_date, settlement.deposit_date) desc, settlement.name desc
         """,
         values,
         as_dict=True,
@@ -54,7 +63,7 @@ def execute(filters=None):
         {"label": _("Expected"), "fieldname": "expected_total", "fieldtype": "Currency", "width": 120},
         {"label": _("Deposited"), "fieldname": "deposit_amount", "fieldtype": "Currency", "width": 120},
         {"label": _("Difference"), "fieldname": "difference_amount", "fieldtype": "Currency", "width": 105},
-        {"label": _("Paid From"), "fieldname": "source_account", "fieldtype": "Link", "options": "Account", "width": 170},
+        {"label": _("Paid From Account(s)"), "fieldname": "source_account", "fieldtype": "Data", "width": 190},
         {"label": _("Status"), "fieldname": "status", "fieldtype": "Data", "width": 90},
         {"label": _("Journal Entry"), "fieldname": "journal_entry", "fieldtype": "Link", "options": "Journal Entry", "width": 150},
     ]
