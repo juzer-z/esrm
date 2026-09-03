@@ -8,8 +8,8 @@
  "fields": [
   {"default":"IATA-MEMO-.YYYY.-","fieldname":"naming_series","fieldtype":"Select","label":"Series","options":"IATA-MEMO-.YYYY.-","reqd":1,"set_only_once":1},
   {"fieldname":"company","fieldtype":"Link","label":"Company","options":"Company","reqd":1,"in_standard_filter":1},
-  {"default":"ACM","fieldname":"memo_type","fieldtype":"Select","label":"Memo Type","options":"ACM\nADM","reqd":1,"in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"memo_number","fieldtype":"Data","label":"Memo Number","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"default":"ACM","fieldname":"memo_type","fieldtype":"Select","label":"Entry Type","options":"ACM\nADM\nLate Fee","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"memo_number","fieldtype":"Data","label":"Memo / Reference Number","reqd":1,"in_list_view":1,"in_standard_filter":1},
   {"default":"Today","fieldname":"memo_date","fieldtype":"Date","label":"IATA Statement Date","reqd":1,"in_list_view":1,"in_standard_filter":1},
   {"fieldname":"column_break_1","fieldtype":"Column Break"},
   {"default":"Draft","fieldname":"status","fieldtype":"Select","label":"Status","options":"Draft\nUnsettled\nSettled\nCancelled","read_only":1,"in_list_view":1,"in_standard_filter":1,"no_copy":1},
@@ -17,7 +17,7 @@
   {"default":"International","fieldname":"travel_type","fieldtype":"Select","label":"Travel Type","options":"International\nDomestic","reqd":1,"in_list_view":1},
   {"fieldname":"ticket_booking","fieldtype":"Link","label":"Related Ticket Booking (Optional)","options":"Ticket Booking"},
   {"fieldname":"ticket_number","fieldtype":"Data","label":"Related Ticket Number","read_only":1,"fetch_from":"ticket_booking.ticket_number"},
-  {"fieldname":"amount","fieldtype":"Currency","label":"Signed Amount","reqd":1,"in_list_view":1,"description":"Enter ACM credits as negative amounts and ADM charges as positive amounts."},
+  {"fieldname":"amount","fieldtype":"Currency","label":"Signed Amount","reqd":1,"in_list_view":1,"description":"Enter ACM credits as negative amounts. Enter ADM charges and late fees as positive amounts."},
   {"fieldname":"attachment","fieldtype":"Attach","label":"Memo Attachment"},
   {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"},
   {"allow_on_submit":1,"fieldname":"iata_settlement","fieldtype":"Link","label":"IATA Settlement","options":"IATA Settlement","read_only":1,"no_copy":1}

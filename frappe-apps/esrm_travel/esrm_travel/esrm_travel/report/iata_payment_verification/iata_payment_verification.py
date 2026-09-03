@@ -106,10 +106,10 @@ def get_data(filters):
 
 def get_summary(data):
     booking_rows = [row for row in data if row.entry_type == "Booking"]
-    memo_rows = [row for row in data if row.entry_type in ("ACM", "ADM")]
+    memo_rows = [row for row in data if row.entry_type in ("ACM", "ADM", "Late Fee")]
     return [
         {"label": _("Approved IATA Bookings"), "value": len(booking_rows), "datatype": "Int", "indicator": "Blue"},
-        {"label": _("ACM / ADM Memos"), "value": len(memo_rows), "datatype": "Int", "indicator": "Orange"},
+        {"label": _("Memos / Fees"), "value": len(memo_rows), "datatype": "Int", "indicator": "Orange"},
         {"label": _("Gross Amount"), "value": sum(row.gross_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Invoice Amount"), "value": sum(row.invoice_amount or 0 for row in data), "datatype": "Currency", "indicator": "Green"},
         {"label": _("Net IATA Amount"), "value": sum(row.iata_amount or 0 for row in data), "datatype": "Currency", "indicator": "Blue"},
@@ -146,7 +146,7 @@ def download_verified_pdf(from_date, to_date):
     context = {
         "rows": data,
         "booking_count": sum(1 for row in data if row.entry_type == "Booking"),
-        "memo_count": sum(1 for row in data if row.entry_type in ("ACM", "ADM")),
+        "memo_count": sum(1 for row in data if row.entry_type in ("ACM", "ADM", "Late Fee")),
         "from_date": formatdate(filters.from_date, "dd MMM yyyy"),
         "to_date": formatdate(filters.to_date, "dd MMM yyyy"),
         "total_gross": sum(row.gross_amount or 0 for row in data),

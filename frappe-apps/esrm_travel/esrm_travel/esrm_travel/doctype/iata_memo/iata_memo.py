@@ -28,6 +28,8 @@ class IATAMemo(Document):
             frappe.throw(_("ACM amounts must be negative because they reduce the IATA payable."))
         if self.memo_type == "ADM" and flt(self.amount) <= 0:
             frappe.throw(_("ADM amounts must be positive because they increase the IATA payable."))
+        if self.memo_type == "Late Fee" and flt(self.amount) <= 0:
+            frappe.throw(_("Late Fee amounts must be positive because they increase the IATA payable."))
         duplicate = frappe.db.get_value(
             "IATA Memo",
             {"memo_type": self.memo_type, "memo_number": self.memo_number, "name": ["!=", self.name]},
