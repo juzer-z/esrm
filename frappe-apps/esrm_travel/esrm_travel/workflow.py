@@ -399,6 +399,8 @@ def after_delete_sales_invoice(doc, method=None):
 
 
 def on_submit_payment_entry(doc, method=None):
+    from esrm_travel.cash_advance import update_due_date_from_payment_entry
+    update_due_date_from_payment_entry(doc)
     for booking_name in get_related_ticket_bookings_from_payment_entry(doc):
         sync_ticket_booking(booking_name)
     for service_name in get_related_visa_services_from_payment_entry(doc):

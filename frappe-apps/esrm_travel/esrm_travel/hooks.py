@@ -23,6 +23,8 @@ doctype_js = {
     "Customer": "public/js/customer.js",
     "Payment Entry": "public/js/payment_entry.js",
     "Sales Invoice": "public/js/sales_invoice.js",
+    "Employee Advance": "public/js/employee_advance.js",
+    "Expense Claim": "public/js/expense_claim.js",
 }
 
 doctype_list_js = {
@@ -96,4 +98,33 @@ doc_events = {
         "on_update_after_submit": "esrm_travel.workflow.on_update_after_submit_payment_entry",
         "on_cancel": "esrm_travel.workflow.on_cancel_payment_entry",
     },
+    "Employee Advance": {
+        "before_validate": "esrm_travel.cash_advance.before_validate_employee_advance",
+        "on_submit": "esrm_travel.cash_advance.on_submit_employee_advance",
+        "on_cancel": "esrm_travel.cash_advance.on_cancel_employee_advance",
+    },
+    "Expense Claim": {
+        "before_validate": "esrm_travel.cash_advance.before_validate_expense_claim",
+        "before_submit": "esrm_travel.cash_advance.before_submit_expense_claim",
+        "on_submit": "esrm_travel.cash_advance.on_submit_expense_claim",
+        "on_cancel": "esrm_travel.cash_advance.on_cancel_expense_claim",
+    },
+    "Journal Entry": {
+        "on_submit": "esrm_travel.cash_advance.on_submit_journal_entry",
+        "on_cancel": "esrm_travel.cash_advance.on_cancel_journal_entry",
+    },
+}
+
+scheduler_events = {
+    "daily": ["esrm_travel.cash_advance.refresh_overdue_cash_advances"],
+}
+
+permission_query_conditions = {
+    "Employee Advance": "esrm_travel.cash_advance.employee_advance_query_conditions",
+    "Expense Claim": "esrm_travel.cash_advance.expense_claim_query_conditions",
+}
+
+has_permission = {
+    "Employee Advance": "esrm_travel.cash_advance.employee_advance_has_permission",
+    "Expense Claim": "esrm_travel.cash_advance.expense_claim_has_permission",
 }

@@ -5,6 +5,7 @@ from esrm_travel.access_control import setup_access_controls
 from esrm_travel.hrms_setup import setup_hrms
 from esrm_travel.branding import apply_branding
 from esrm_travel.chart_of_accounts import get_company, setup_chart_of_accounts
+from esrm_travel.cash_advance_setup import setup_cash_advance_module
 from esrm_travel.print_formats import setup_print_formats
 from esrm_travel.workflow import backfill_sales_invoice_passenger_names
 
@@ -13,6 +14,7 @@ def setup_workspace():
     setup_access_controls()
     apply_branding()
     setup_chart_of_accounts()
+    setup_cash_advance_module()
     setup_hrms()
     setup_general_service_defaults()
     setup_print_formats()
@@ -446,6 +448,8 @@ CHARTS = [
 ]
 
 SHORTCUTS = [
+    {"type": "DocType", "link_to": "Employee Advance", "doc_view": "New", "label": "Request Cash", "color": "#e67700"},
+    {"type": "DocType", "link_to": "Employee Advance", "doc_view": "List", "label": "Cash Advances", "color": "#7048e8"},
     {"type": "DocType", "link_to": "Ticket Booking", "doc_view": "New", "label": "New Booking", "color": "#0b7285"},
     {"type": "DocType", "link_to": "Ticket Booking", "doc_view": "List", "label": "Find Booking", "color": "#364fc7"},
     {"type": "DocType", "link_to": "Visa Service", "doc_view": "New", "label": "New Visa Service", "color": "#087f5b"},
@@ -464,6 +468,10 @@ SHORTCUTS = [
 ]
 
 LINKS = [
+    {"type": "Card Break", "label": "Cash Advances", "icon": "expense", "description": "Request, approve, disburse, and settle employee cash advances with receipts."},
+    {"type": "Link", "label": "Employee Advance", "link_type": "DocType", "link_to": "Employee Advance"},
+    {"type": "Link", "label": "Expense Claim", "link_type": "DocType", "link_to": "Expense Claim"},
+    {"type": "Link", "label": "Cash Advance Register", "link_type": "Report", "link_to": "Cash Advance Register", "is_query_report": 1, "report_ref_doctype": "Employee Advance"},
     {"type": "Card Break", "label": "Daily Operations", "icon": "calendar", "description": "Create tickets, track references, update IATA amounts, and find bookings quickly."},
     {"type": "Link", "label": "Ticket Booking", "link_type": "DocType", "link_to": "Ticket Booking"},
     {"type": "Link", "label": "Customer", "link_type": "DocType", "link_to": "Customer"},
@@ -499,6 +507,8 @@ def get_workspace_content():
         number_card("Outstanding Amount", 3),
         spacer(),
         header("Quick Workflows"),
+        shortcut("Request Cash", 3),
+        shortcut("Cash Advances", 3),
         shortcut("New Booking", 3),
         shortcut("Find Booking", 3),
         shortcut("New Visa Service", 3),

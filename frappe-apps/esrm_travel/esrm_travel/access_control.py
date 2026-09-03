@@ -6,6 +6,7 @@ from werkzeug.utils import redirect
 AGENT_USER = "agent@esrm.local"
 AGENT_ROLE = "ESRM Agent"
 APPROVER_ROLE = "ESRM Approver"
+ACCOUNTS_ROLE = "ESRM Accounts"
 HR_MANAGER_ROLE = "HR Manager"
 ALLOWED_AGENT_MODULES = {
     "Accounts", "Communication", "Contacts", "Core", "Desk", "ESRM Travel",
@@ -48,6 +49,12 @@ AGENT_PERMISSIONS = {
     "Cost Center": dict(read=1, select=1),
     "Journal Entry": dict(read=1, print=1, report=1, export=1, select=1),
     "Page": dict(read=1, select=1),
+    "Employee Advance": dict(read=1, write=1, create=1, submit=1, print=1, report=1, select=1),
+    "Expense Claim": dict(read=1, write=1, create=1, submit=1, print=1, report=1, select=1),
+    "Expense Claim Detail": dict(read=1, write=1, create=1, select=1),
+    "Expense Claim Advance": dict(read=1, write=1, create=1, select=1),
+    "Expense Claim Type": dict(read=1, select=1),
+    "Employee": dict(read=1, select=1),
 }
 
 
@@ -82,8 +89,13 @@ def set_esrm_login_destination(login_manager=None):
 def setup_access_controls():
     ensure_role(AGENT_ROLE)
     ensure_role(APPROVER_ROLE)
+    ensure_role(ACCOUNTS_ROLE)
     configure_administrator()
     setup_agent_permissions()
+    setup_accounts_permissions()
+    setup_employee_cash_permissions()
+    setup_approver_cash_permissions()
+    configure_employee_users()
     setup_workflow()
     configure_system_user_homepages()
     if frappe.db.exists("User", AGENT_USER):
@@ -126,6 +138,108 @@ def setup_agent_permissions():
         }
         values.update({field: int(allowed.get(field, 0)) for field in permission_fields})
         frappe.get_doc(values).insert(ignore_permissions=True)
+def setup_accounts_permissions():
+    permissions = {
+        "Employee Advance": dict(read=1, write=1, create=1, submit=1, print=1, report=1, export=1, select=1),
+        "Expense Claim": dict(read=1, write=1, create=1, submit=1, print=1, report=1, export=1, select=1),
+        "Expense Claim Detail": dict(read=1, write=1, create=1, select=1),
+        "Expense Claim Advance": dict(read=1, write=1, create=1, select=1),
+        "Expense Claim Type": dict(read=1, select=1),
+        "Employee": dict(read=1, select=1),
+        "Company": dict(read=1, select=1),
+        "Account": dict(read=1, select=1),
+        "Mode of Payment": dict(read=1, select=1),
+        "Cost Center": dict(read=1, select=1),
+        "Payment Entry": dict(read=1, write=1, create=1, submit=1, cancel=1, print=1, report=1, export=1, select=1),
+        "Journal Entry": dict(read=1, write=1, create=1, submit=1, cancel=1, print=1, report=1, export=1, select=1),
+    }
+    for name in frappe.get_all("Custom DocPerm", filters={"role": ACCOUNTS_ROLE}, pluck="name"):
+        frappe.delete_doc("Custom DocPerm", name, ignore_permissions=True, force=True)
+    permission_fields = (
+        "read", "write", "create", "delete", "submit", "cancel", "amend", "report",
+        "export", "import", "share", "print", "email", "select",
+    )
+    for doctype, allowed in permissions.items():
+        values = {
+            "doctype": "Custom DocPerm", "parent": doctype, "parenttype": "DocType",
+            "parentfield": "permissions", "role": ACCOUNTS_ROLE, "permlevel": 0,
+        }
+        values.update({field: int(allowed.get(field, 0)) for field in permission_fields})
+        frappe.get_doc(values).insert(ignore_permissions=True)
+def setup_employee_cash_permissions():
+    permissions = {
+        "Employee Advance": dict(read=1, write=1, create=1, submit=1, print=1, report=1, select=1),
+        "Expense Claim": dict(read=1, write=1, create=1, submit=1, print=1, report=1, select=1),
+        "Expense Claim Detail": dict(read=1, write=1, create=1, select=1),
+        "Expense Claim Advance": dict(read=1, write=1, create=1, select=1),
+        "Expense Claim Type": dict(read=1, select=1),
+        "Employee": dict(read=1, select=1),
+        "Company": dict(read=1, select=1),
+        "Account": dict(read=1, select=1),
+        "Currency": dict(read=1, select=1),
+        "Cost Center": dict(read=1, select=1),
+    }
+    permission_fields = (
+        "read", "write", "create", "delete", "submit", "cancel", "amend", "report",
+        "export", "import", "share", "print", "email", "select",
+    )
+    for doctype, allowed in permissions.items():
+        existing = frappe.get_all(
+            "Custom DocPerm", filters={"role": "Employee", "parent": doctype}, pluck="name"
+        )
+        for name in existing:
+            frappe.delete_doc("Custom DocPerm", name, ignore_permissions=True, force=True)
+        values = {
+            "doctype": "Custom DocPerm", "parent": doctype, "parenttype": "DocType",
+            "parentfield": "permissions", "role": "Employee", "permlevel": 0,
+        }
+        values.update({field: int(allowed.get(field, 0)) for field in permission_fields})
+        frappe.get_doc(values).insert(ignore_permissions=True)
+
+
+def setup_approver_cash_permissions():
+    permissions = {
+        "Employee Advance": dict(read=1, write=1, submit=1, print=1, report=1, export=1, select=1),
+        "Employee": dict(read=1, select=1),
+        "Company": dict(read=1, select=1),
+        "Currency": dict(read=1, select=1),
+    }
+    permission_fields = (
+        "read", "write", "create", "delete", "submit", "cancel", "amend", "report",
+        "export", "import", "share", "print", "email", "select",
+    )
+    for doctype, allowed in permissions.items():
+        existing = frappe.get_all(
+            "Custom DocPerm", filters={"role": APPROVER_ROLE, "parent": doctype}, pluck="name"
+        )
+        for name in existing:
+            frappe.delete_doc("Custom DocPerm", name, ignore_permissions=True, force=True)
+        values = {
+            "doctype": "Custom DocPerm", "parent": doctype, "parenttype": "DocType",
+            "parentfield": "permissions", "role": APPROVER_ROLE, "permlevel": 0,
+        }
+        values.update({field: int(allowed.get(field, 0)) for field in permission_fields})
+        frappe.get_doc(values).insert(ignore_permissions=True)
+
+
+def configure_employee_users():
+    if not frappe.db.exists("Role", "Employee"):
+        return
+    users = frappe.get_all(
+        "Employee", filters={"status": "Active", "user_id": ["is", "set"]}, pluck="user_id"
+    )
+    for user in users:
+        if frappe.db.exists("User", user) and not frappe.db.exists(
+            "Has Role", {"parent": user, "role": "Employee"}
+        ):
+            frappe.get_doc(
+                {
+                    "doctype": "Has Role", "parent": user, "parenttype": "User",
+                    "parentfield": "roles", "role": "Employee",
+                }
+            ).insert(ignore_permissions=True)
+
+
 def setup_workflow():
     for workflow_name in (
         "Ticket Booking Approval",
@@ -152,7 +266,7 @@ def setup_workflow():
 
 
 def configure_administrator():
-    roles = [AGENT_ROLE, APPROVER_ROLE]
+    roles = [AGENT_ROLE, APPROVER_ROLE, ACCOUNTS_ROLE]
     if frappe.db.exists("Role", HR_MANAGER_ROLE):
         roles.append(HR_MANAGER_ROLE)
 
