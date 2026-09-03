@@ -100,11 +100,13 @@ doc_events = {
     },
     "Employee Advance": {
         "before_validate": "esrm_travel.cash_advance.before_validate_employee_advance",
+        "on_update": "esrm_travel.cash_advance_notifications.notify_employee_advance_update",
         "on_submit": "esrm_travel.cash_advance.on_submit_employee_advance",
         "on_cancel": "esrm_travel.cash_advance.on_cancel_employee_advance",
     },
     "Expense Claim": {
         "before_validate": "esrm_travel.cash_advance.before_validate_expense_claim",
+        "on_update": "esrm_travel.cash_advance_notifications.notify_expense_claim_update",
         "before_submit": "esrm_travel.cash_advance.before_submit_expense_claim",
         "on_submit": "esrm_travel.cash_advance.on_submit_expense_claim",
         "on_cancel": "esrm_travel.cash_advance.on_cancel_expense_claim",
