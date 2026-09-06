@@ -141,6 +141,8 @@ def ensure_accounting_defaults():
     save_doc(price_list)
     frappe.db.set_single_value("Selling Settings", "selling_price_list", selling_price_list)
 
+    ensure_visa_service_item(company)
+
     root_cost_center = f"{company} - ESRM"
     default_cost_center = "Main - ESRM"
     default_income_account = "Air Ticket Sales-International - ESRM"
@@ -176,6 +178,8 @@ def ensure_accounting_defaults():
         settings.default_company = company
     if not settings.default_service_item and frappe.db.exists("Item", "TB"):
         settings.default_service_item = "TB"
+    if frappe.db.exists("Item", "VS"):
+        settings.visa_service_item = "VS"
 
     income_account_root_type = None
     income_account_is_group = 0
@@ -202,15 +206,20 @@ def ensure_accounting_defaults():
         settings.international_income_account = default_income_account
         if not settings.general_service_income_account:
             settings.general_service_income_account = default_income_account
+    visa_income_account = "Visa and Other Service-Sales - ESRM"
+    if frappe.db.exists("Account", visa_income_account):
+        settings.visa_income_account = visa_income_account
 
     if (
         settings.has_value_changed("default_company")
         or settings.has_value_changed("default_service_item")
+        or settings.has_value_changed("visa_service_item")
         or settings.has_value_changed("default_cost_center")
         or settings.has_value_changed("default_income_account")
         or settings.has_value_changed("domestic_income_account")
         or settings.has_value_changed("international_income_account")
         or settings.has_value_changed("general_service_income_account")
+        or settings.has_value_changed("visa_income_account")
     ):
         settings.flags.ignore_mandatory = True
         settings.save(ignore_permissions=True)
@@ -230,6 +239,39 @@ def ensure_accounting_defaults():
             "root_cost_center": root_cost_center,
         },
     )
+
+
+def ensure_visa_service_item(company):
+    item_code = "VS"
+    item_group = "Services"
+    if not frappe.db.exists("Item Group", item_group):
+        item_group = "Ticketing" if frappe.db.exists("Item Group", "Ticketing") else "All Item Groups"
+    if frappe.db.exists("Item", item_code):
+        item = frappe.get_doc("Item", item_code)
+    else:
+        item = frappe.get_doc(
+            {
+                "doctype": "Item",
+                "item_code": item_code,
+                "item_name": "Visa Service",
+                "description": "Visa processing and related services",
+                "item_group": item_group,
+                "is_stock_item": 0,
+                "include_item_in_manufacturing": 0,
+                "stock_uom": "Nos",
+            }
+        )
+    item.item_name = "Visa Service"
+    item.description = "Visa processing and related services"
+    item.is_stock_item = 0
+    income_account = "Visa and Other Service-Sales - ESRM"
+    if frappe.db.exists("Account", income_account):
+        row = next((row for row in item.get("item_defaults", []) if row.company == company), None)
+        if row:
+            row.income_account = income_account
+        else:
+            item.append("item_defaults", {"company": company, "income_account": income_account})
+    save_doc(item)
 
 
 def recalculate_ticket_profitability():

@@ -559,8 +559,9 @@ def make_sales_invoice_from_services(service_names, amended_from=None):
             frappe.throw(_("Visa Service {0} must have a positive Invoice Amount.").format(service.name))
 
     settings = frappe.get_single("ESRM Travel Settings")
-    if not settings.default_company or not settings.default_service_item:
-        frappe.throw(_("Set Default Company and Default Service Item in ESRM Settings first."))
+    visa_service_item = getattr(settings, "visa_service_item", None) or settings.default_service_item
+    if not settings.default_company or not visa_service_item:
+        frappe.throw(_("Set Default Company and Visa Service Item in ESRM Settings first."))
     company_currency = frappe.db.get_value("Company", settings.default_company, "default_currency") or "BDT"
     for service in services:
         if service.currency != company_currency:
@@ -578,7 +579,7 @@ def make_sales_invoice_from_services(service_names, amended_from=None):
     detail_rows = []
     for service in services:
         item = {
-            "item_code": settings.default_service_item,
+            "item_code": visa_service_item,
             "qty": 1,
             "rate": service.invoice_amount,
             "description": build_invoice_description(service),

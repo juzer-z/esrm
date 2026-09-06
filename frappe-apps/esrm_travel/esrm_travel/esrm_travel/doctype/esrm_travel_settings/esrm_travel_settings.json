@@ -7,6 +7,7 @@
   "defaults_section",
   "default_company",
   "default_service_item",
+  "visa_service_item",
   "column_break_1",
   "default_cost_center",
   "default_income_account",
@@ -86,6 +87,12 @@
    "label": "International Ticket Income Account",
    "options": "Account",
    "reqd": 1
+  },
+  {
+   "fieldname": "visa_service_item",
+   "fieldtype": "Link",
+   "label": "Visa Service Item",
+   "options": "Item"
   },
   {
    "fieldname": "visa_income_account",
