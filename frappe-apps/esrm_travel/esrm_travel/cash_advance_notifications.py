@@ -2,7 +2,7 @@ from html import escape
 
 import frappe
 from frappe import _
-from frappe.utils import fmt_money
+from frappe.utils import fmt_money, get_url_to_form
 
 
 ACCOUNTS_EMAIL = "accounts@ezzygroup.net"
@@ -10,6 +10,43 @@ ACCOUNTS_EMAIL = "accounts@ezzygroup.net"
 
 def _employee_email(employee):
     return frappe.db.get_value("Employee", employee, "company_email")
+
+
+def _employee_user(employee):
+    return frappe.db.get_value("Employee", employee, "user_id")
+
+
+def _role_users(role):
+    return frappe.get_all(
+        "Has Role",
+        filters={"role": role, "parenttype": "User"},
+        pluck="parent",
+    )
+
+
+def _notify_users(users, doc, subject, message):
+    recipients = sorted(
+        {
+            user for user in users
+            if user
+            and user != "Guest"
+            and user != frappe.session.user
+            and frappe.db.get_value("User", user, "enabled")
+        }
+    )
+    for user in recipients:
+        notification = frappe.new_doc("Notification Log")
+        notification.update({
+            "type": "Alert",
+            "for_user": user,
+            "from_user": frappe.session.user,
+            "subject": subject,
+            "email_content": escape(message),
+            "document_type": doc.doctype,
+            "document_name": doc.name,
+            "link": get_url_to_form(doc.doctype, doc.name),
+        })
+        notification.insert(ignore_permissions=True)
 
 
 def _send(recipients, subject, heading, lines):
@@ -38,6 +75,14 @@ def notify_employee_advance_update(doc, method=None):
         f"Purpose: {doc.purpose}",
     ]
     if state == "Pending Approval":
+        _notify_users(
+            [*_role_users("ESRM Approver"), "Administrator"],
+            doc,
+            _("Cash advance {0} requires approval").format(doc.name),
+            _("{0} requested {1} for {2}.").format(
+                doc.employee_name, amount, doc.purpose
+            ),
+        )
         _send(
             [employee_email],
             f"Cash advance submitted — {doc.employee_name}",
@@ -45,6 +90,14 @@ def notify_employee_advance_update(doc, method=None):
             common,
         )
     elif state == "Approved":
+        _notify_users(
+            [_employee_user(doc.employee), *_role_users("ESRM Accounts")],
+            doc,
+            _("Cash advance {0} approved").format(doc.name),
+            _("The cash advance for {0} ({1}) was approved and is ready for disbursement.").format(
+                doc.employee_name, amount
+            ),
+        )
         _send(
             [employee_email],
             f"Cash advance approved — {doc.employee_name}",
@@ -58,6 +111,12 @@ def notify_employee_advance_update(doc, method=None):
             common + ["Please open the approved advance and record the disbursement."],
         )
     elif state == "Rejected":
+        _notify_users(
+            [_employee_user(doc.employee)],
+            doc,
+            _("Cash advance {0} rejected").format(doc.name),
+            _("Your cash advance request for {0} was returned for revision.").format(amount),
+        )
         _send(
             [employee_email],
             f"Cash advance requires revision — {doc.employee_name}",
