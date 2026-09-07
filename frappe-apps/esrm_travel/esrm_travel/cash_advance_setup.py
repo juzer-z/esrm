@@ -12,6 +12,8 @@ OLD_ADVANCE_ACCOUNTS = (
     "Employee Control Ledger/Staff Advance - ESRM",
 )
 EXPENSE_TYPES = (
+    ("Non-IATA Airline Ticket Cost - International", "Air Ticket Purchase- International"),
+    ("Non-IATA Airline Ticket Cost - Domestic", "Air Ticket Purchase -Domestic"),
     ("Local Conveyance", "Local Conveyance"),
     ("Travel and Daily Allowance", "TA & DA"),
     ("Fuel", "Fuel Cost"),
@@ -33,6 +35,7 @@ def setup_cash_advance_module():
         return
     setup_custom_fields()
     setup_company_defaults()
+    setup_default_expense_approvers()
     setup_expense_types()
     setup_workflow_masters()
     setup_employee_advance_workflow()
@@ -120,6 +123,19 @@ def setup_company_defaults():
         if frappe.db.exists("Account", payable_account):
             frappe.db.set_value(
                 "Company", COMPANY, "default_expense_claim_payable_account", payable_account,
+                update_modified=False,
+            )
+
+
+def setup_default_expense_approvers():
+    """Use Administrator as the interim approver for every active employee."""
+    if not frappe.db.exists("User", "Administrator"):
+        return
+    employees = frappe.get_all("Employee", filters={"status": "Active"}, pluck="name")
+    for employee in employees:
+        if frappe.db.get_value("Employee", employee, "expense_approver") != "Administrator":
+            frappe.db.set_value(
+                "Employee", employee, "expense_approver", "Administrator",
                 update_modified=False,
             )
 
