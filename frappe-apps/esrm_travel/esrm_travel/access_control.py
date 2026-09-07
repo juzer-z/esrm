@@ -7,6 +7,7 @@ AGENT_USER = "agent@esrm.local"
 AGENT_ROLE = "ESRM Agent"
 APPROVER_ROLE = "ESRM Approver"
 ACCOUNTS_ROLE = "ESRM Accounts"
+ACCOUNTS_USER = "accounts@ezzygroup.net"
 HR_MANAGER_ROLE = "HR Manager"
 ALLOWED_AGENT_MODULES = {
     "Accounts", "Communication", "Contacts", "Core", "Desk", "ESRM Travel",
@@ -100,6 +101,8 @@ def setup_access_controls():
     configure_system_user_homepages()
     if frappe.db.exists("User", AGENT_USER):
         configure_agent_user()
+    if frappe.db.exists("User", ACCOUNTS_USER):
+        configure_accounts_user()
     frappe.clear_cache()
 
 
@@ -152,6 +155,7 @@ def setup_accounts_permissions():
         "Cost Center": dict(read=1, select=1),
         "Payment Entry": dict(read=1, write=1, create=1, submit=1, cancel=1, print=1, report=1, export=1, select=1),
         "Journal Entry": dict(read=1, write=1, create=1, submit=1, cancel=1, print=1, report=1, export=1, select=1),
+        "Page": dict(read=1, select=1),
     }
     for name in frappe.get_all("Custom DocPerm", filters={"role": ACCOUNTS_ROLE}, pluck="name"):
         frappe.delete_doc("Custom DocPerm", name, ignore_permissions=True, force=True)
@@ -273,6 +277,25 @@ def configure_administrator():
 
 def configure_agent_user():
     configure_restricted_employee_user(AGENT_USER, enable=True)
+
+
+def configure_accounts_user():
+    user = frappe.get_doc("User", ACCOUNTS_USER)
+    user.enabled = 1
+    user.user_type = "System User"
+    user.default_workspace = "ESRM"
+    user.module_profile = None
+    allowed_modules = {
+        "Accounts", "Communication", "Contacts", "Core", "Desk", "ESRM Travel",
+        "Printing", "Setup", "Utilities", "Workflow",
+    }
+    blocked = frappe.get_all(
+        "Module Def", filters={"name": ["not in", sorted(allowed_modules)]},
+        pluck="name", order_by="name",
+    )
+    user.set("block_modules", [{"module": module} for module in blocked])
+    user.set("roles", [{"role": ACCOUNTS_ROLE}])
+    user.save(ignore_permissions=True)
 
 
 def configure_restricted_employee_user(user_name, enable=False):
