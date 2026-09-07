@@ -312,3 +312,18 @@ def configure_restricted_employee_user(user_name, enable=False):
     user.set("block_modules", [{"module": module} for module in blocked])
     user.set("roles", [{"role": AGENT_ROLE}])
     user.save(ignore_permissions=True)
+    set_employee_user_defaults(user_name)
+
+
+def set_employee_user_defaults(user_name):
+    """Default cash forms to the Employee linked to the signed-in user."""
+    employee = frappe.db.get_value(
+        "Employee", {"user_id": user_name, "status": "Active"},
+        ["name", "company"], as_dict=True,
+    )
+    if not employee:
+        return
+
+    frappe.defaults.set_user_default("Employee", employee.name, user_name)
+    if employee.company:
+        frappe.defaults.set_user_default("Company", employee.company, user_name)
