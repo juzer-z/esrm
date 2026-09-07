@@ -129,4 +129,6 @@ permission_query_conditions = {
 has_permission = {
     "Employee Advance": "esrm_travel.cash_advance.employee_advance_has_permission",
     "Expense Claim": "esrm_travel.cash_advance.expense_claim_has_permission",
+    "Number Card": "esrm_travel.dashboard_permissions.number_card_has_permission",
+    "Dashboard Chart": "esrm_travel.dashboard_permissions.dashboard_chart_has_permission",
 }
