@@ -6,6 +6,7 @@ from frappe.utils import add_days, flt, getdate, nowdate
 PRIVILEGED_ROLES = {"System Manager", "ESRM Approver", "ESRM Accounts", "HR Manager"}
 EMPLOYEE_ROLES = {"Employee", "ESRM Agent"}
 ADVANCE_ACCOUNT = "Staff Cash Advances - ESRM"
+DEFAULT_DISBURSEMENT_ACCOUNT = "Petty Cash - ESRM"
 
 
 def _roles(user=None):
@@ -238,3 +239,126 @@ def make_cash_expense_claim(employee_advance):
         claimed_amount=advance.claimed_amount,
         return_amount=advance.return_amount,
     )
+
+
+def _require_accounts_user():
+    roles = _roles()
+    if frappe.session.user != "Administrator" and not roles.intersection(
+        {"ESRM Accounts", "System Manager"}
+    ):
+        frappe.throw(_("Only Accounts can disburse an employee advance."), frappe.PermissionError)
+
+
+@frappe.whitelist()
+def get_cash_disbursement_defaults(employee_advance):
+    _require_accounts_user()
+    advance = frappe.get_doc("Employee Advance", employee_advance)
+    advance.check_permission("read")
+    return {
+        "account": DEFAULT_DISBURSEMENT_ACCOUNT,
+        "posting_date": nowdate(),
+        "amount": max(flt(advance.advance_amount) - flt(advance.paid_amount), 0),
+    }
+
+
+@frappe.whitelist()
+def disburse_cash_advance(
+    employee_advance,
+    disbursement_account=DEFAULT_DISBURSEMENT_ACCOUNT,
+    posting_date=None,
+    amount=None,
+    reference_no=None,
+):
+    """Create and submit the Journal Entry for an approved cash advance."""
+    _require_accounts_user()
+    frappe.db.sql(
+        "select name from `tabEmployee Advance` where name = %s for update",
+        employee_advance,
+    )
+    advance = frappe.get_doc("Employee Advance", employee_advance)
+    advance.check_permission("read")
+    if advance.docstatus != 1 or advance.workflow_state != "Approved":
+        frappe.throw(_("Only an approved employee advance can be disbursed."))
+
+    remaining = max(flt(advance.advance_amount) - flt(advance.paid_amount), 0)
+    amount = flt(amount or remaining)
+    if remaining <= 0:
+        frappe.throw(_("This employee advance is already fully disbursed."))
+    if amount <= 0 or amount > remaining:
+        frappe.throw(
+            _("Disbursement must be greater than zero and cannot exceed {0}.").format(
+                frappe.format_value(remaining, {"fieldtype": "Currency", "options": advance.currency})
+            )
+        )
+
+    account = frappe.db.get_value(
+        "Account", disbursement_account,
+        ["name", "company", "account_type", "is_group", "disabled"], as_dict=True,
+    )
+    if (
+        not account
+        or account.company != advance.company
+        or account.is_group
+        or account.disabled
+        or account.account_type not in {"Cash", "Bank"}
+    ):
+        frappe.throw(_("Select an active Cash or Bank ledger belonging to {0}.").format(advance.company))
+    if account.account_type == "Bank" and not reference_no:
+        frappe.throw(_("A transaction reference is required when disbursing from a bank ledger."))
+
+    posting_date = getdate(posting_date or nowdate())
+    advance_currency = frappe.db.get_value("Account", advance.advance_account, "account_currency")
+    payment_currency = frappe.db.get_value("Account", account.name, "account_currency")
+    if advance_currency != payment_currency:
+        frappe.throw(_("The selected ledger must use the same currency as the staff advance ledger."))
+
+    import erpnext
+
+    cost_center = erpnext.get_default_cost_center(advance.company)
+    journal = frappe.new_doc("Journal Entry")
+    journal.update(
+        {
+            "voucher_type": "Cash Entry" if account.account_type == "Cash" else "Bank Entry",
+            "company": advance.company,
+            "posting_date": posting_date,
+            "cheque_no": reference_no if account.account_type == "Bank" else None,
+            "cheque_date": posting_date if account.account_type == "Bank" else None,
+            "remark": _("Disbursement against Employee Advance {0}: {1}").format(
+                advance.name, advance.purpose
+            ),
+        }
+    )
+    journal.append(
+        "accounts",
+        {
+            "account": advance.advance_account,
+            "account_currency": advance_currency,
+            "exchange_rate": 1,
+            "debit_in_account_currency": amount,
+            "reference_type": "Employee Advance",
+            "reference_name": advance.name,
+            "party_type": "Employee",
+            "party": advance.employee,
+            "is_advance": "Yes",
+            "cost_center": cost_center,
+        },
+    )
+    journal.append(
+        "accounts",
+        {
+            "account": account.name,
+            "account_currency": payment_currency,
+            "account_type": account.account_type,
+            "exchange_rate": 1,
+            "credit_in_account_currency": amount,
+            "cost_center": cost_center,
+        },
+    )
+    journal.flags.ignore_permissions = True
+    journal.insert()
+    journal.submit()
+    return {
+        "journal_entry": journal.name,
+        "amount": amount,
+        "cash_status": frappe.db.get_value("Employee Advance", advance.name, "custom_cash_status"),
+    }
