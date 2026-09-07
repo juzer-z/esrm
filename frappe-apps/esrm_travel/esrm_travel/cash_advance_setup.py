@@ -5,6 +5,7 @@ from esrm_travel.chart_of_accounts import COMPANY, get_account_name
 
 
 ACCOUNTS_ROLE = "ESRM Accounts"
+AGENT_ROLE = "ESRM Agent"
 ADVANCE_ACCOUNT = "Staff Cash Advances - ESRM"
 OLD_ADVANCE_ACCOUNTS = (
     "Employee Advances - ESRM",
@@ -179,16 +180,16 @@ def setup_employee_advance_workflow():
         "Employee Advance",
         "workflow_state",
         [
-            _state("Draft", "Employee", 0),
+            _state("Draft", AGENT_ROLE, 0),
             _state("Pending Approval", "ESRM Approver", 0),
             _state("Approved", ACCOUNTS_ROLE, 1),
-            _state("Rejected", "Employee", 0, optional=1),
+            _state("Rejected", AGENT_ROLE, 0, optional=1),
         ],
         [
-            _transition("Draft", "Send for Approval", "Employee", "Pending Approval", self_approval=1),
+            _transition("Draft", "Send for Approval", AGENT_ROLE, "Pending Approval", self_approval=1),
             _transition("Pending Approval", "Approve", "ESRM Approver", "Approved"),
             _transition("Pending Approval", "Reject", "ESRM Approver", "Rejected"),
-            _transition("Rejected", "Revise", "Employee", "Draft", self_approval=1),
+            _transition("Rejected", "Revise", AGENT_ROLE, "Draft", self_approval=1),
         ],
     )
 
@@ -199,23 +200,23 @@ def setup_expense_claim_workflow():
         "Expense Claim",
         "custom_cash_settlement_state",
         [
-            _state("Draft", "Employee", 0),
+            _state("Draft", AGENT_ROLE, 0),
             _state("Accounts Review", ACCOUNTS_ROLE, 0),
-            _state("Submitted", "Employee", 1),
-            _state("Rejected", "Employee", 0, optional=1),
+            _state("Submitted", AGENT_ROLE, 1),
+            _state("Rejected", AGENT_ROLE, 0, optional=1),
         ],
         [
             _transition(
-                "Draft", "Submit Settlement", "Employee", "Submitted",
+                "Draft", "Submit Settlement", AGENT_ROLE, "Submitted",
                 condition="doc.custom_settlement_variance <= 0", self_approval=1,
             ),
             _transition(
-                "Draft", "Send to Accounts", "Employee", "Accounts Review",
+                "Draft", "Send to Accounts", AGENT_ROLE, "Accounts Review",
                 condition="doc.custom_settlement_variance > 0", self_approval=1,
             ),
             _transition("Accounts Review", "Finalize Settlement", ACCOUNTS_ROLE, "Submitted"),
             _transition("Accounts Review", "Reject", ACCOUNTS_ROLE, "Rejected"),
-            _transition("Rejected", "Revise", "Employee", "Draft", self_approval=1),
+            _transition("Rejected", "Revise", AGENT_ROLE, "Draft", self_approval=1),
         ],
     )
 

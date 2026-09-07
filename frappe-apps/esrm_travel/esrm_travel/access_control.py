@@ -223,21 +223,12 @@ def setup_approver_cash_permissions():
 
 
 def configure_employee_users():
-    if not frappe.db.exists("Role", "Employee"):
-        return
     users = frappe.get_all(
         "Employee", filters={"status": "Active", "user_id": ["is", "set"]}, pluck="user_id"
     )
     for user in users:
-        if frappe.db.exists("User", user) and not frappe.db.exists(
-            "Has Role", {"parent": user, "role": "Employee"}
-        ):
-            frappe.get_doc(
-                {
-                    "doctype": "Has Role", "parent": user, "parenttype": "User",
-                    "parentfield": "roles", "role": "Employee",
-                }
-            ).insert(ignore_permissions=True)
+        if user != "Administrator" and frappe.db.exists("User", user):
+            configure_restricted_employee_user(user)
 
 
 def setup_workflow():
@@ -281,8 +272,13 @@ def configure_administrator():
 
 
 def configure_agent_user():
-    user = frappe.get_doc("User", AGENT_USER)
-    user.enabled = 1
+    configure_restricted_employee_user(AGENT_USER, enable=True)
+
+
+def configure_restricted_employee_user(user_name, enable=False):
+    user = frappe.get_doc("User", user_name)
+    if enable:
+        user.enabled = 1
     user.user_type = "System User"
     user.default_workspace = "ESRM"
     user.module_profile = None
