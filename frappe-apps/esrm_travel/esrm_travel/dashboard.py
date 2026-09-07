@@ -449,7 +449,11 @@ def setup_esrm_workspace():
         {
             "label": "ESRM",
             "title": "ESRM",
-            "module": "ESRM Travel",
+            # This is the shared landing workspace for restricted staff roles as
+            # well as travel agents. Keeping it module-neutral prevents Frappe
+            # from hiding it when a role only reads standard accounting/HR
+            # doctypes referenced by the workspace.
+            "module": "",
             "icon": "plane",
             "indicator_color": "blue",
             "public": 1,
