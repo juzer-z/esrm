@@ -5,7 +5,7 @@ frappe.ui.form.on("Expense Claim", {
             frm.set_value("expense_approver", "Administrator");
         }
         if (frm.doc.docstatus === 0 && !frm.doc.mode_of_payment) {
-            frm.set_value("mode_of_payment", "Cash");
+            frm.set_value("mode_of_payment", "Petty Cash");
         }
 
         const roles = frappe.user_roles || [];

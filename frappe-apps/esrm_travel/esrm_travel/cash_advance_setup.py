@@ -7,6 +7,8 @@ from esrm_travel.chart_of_accounts import COMPANY, get_account_name
 ACCOUNTS_ROLE = "ESRM Accounts"
 AGENT_ROLE = "ESRM Agent"
 ADVANCE_ACCOUNT = "Staff Cash Advances - ESRM"
+PETTY_CASH_ACCOUNT = "Petty Cash - ESRM"
+PETTY_CASH_MODE = "Petty Cash"
 OLD_ADVANCE_ACCOUNTS = (
     "Employee Advances - ESRM",
     "Employee Control Ledger/Staff Advance - ESRM",
@@ -35,6 +37,7 @@ def setup_cash_advance_module():
         return
     setup_custom_fields()
     setup_company_defaults()
+    setup_petty_cash_mode()
     setup_default_expense_approvers()
     setup_expense_types()
     setup_workflow_masters()
@@ -138,6 +141,37 @@ def setup_default_expense_approvers():
                 "Employee", employee, "expense_approver", "Administrator",
                 update_modified=False,
             )
+
+
+def setup_petty_cash_mode():
+    """Provide one valid default mode mapped to the consolidated petty-cash ledger."""
+    if not frappe.db.exists("Account", PETTY_CASH_ACCOUNT):
+        return
+    if frappe.db.exists("Mode of Payment", PETTY_CASH_MODE):
+        mode = frappe.get_doc("Mode of Payment", PETTY_CASH_MODE)
+    else:
+        mode = frappe.get_doc(
+            {
+                "doctype": "Mode of Payment",
+                "mode_of_payment": PETTY_CASH_MODE,
+                "type": "Cash",
+                "enabled": 1,
+            }
+        )
+    mode.type = "Cash"
+    mode.enabled = 1
+    row = next((row for row in mode.accounts if row.company == COMPANY), None)
+    if row:
+        row.default_account = PETTY_CASH_ACCOUNT
+    else:
+        mode.append(
+            "accounts",
+            {"company": COMPANY, "default_account": PETTY_CASH_ACCOUNT},
+        )
+    if mode.is_new():
+        mode.insert(ignore_permissions=True)
+    else:
+        mode.save(ignore_permissions=True)
 
 
 def setup_expense_types():
