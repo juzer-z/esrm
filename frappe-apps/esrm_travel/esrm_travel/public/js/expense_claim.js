@@ -4,6 +4,9 @@ frappe.ui.form.on("Expense Claim", {
         if (frm.doc.docstatus === 0 && frm.doc.expense_approver !== "Administrator") {
             frm.set_value("expense_approver", "Administrator");
         }
+        if (frm.doc.docstatus === 0 && !frm.doc.mode_of_payment) {
+            frm.set_value("mode_of_payment", "Cash");
+        }
 
         const roles = frappe.user_roles || [];
         const is_accounts = roles.includes("ESRM Accounts") || roles.includes("System Manager");
@@ -32,6 +35,17 @@ frappe.ui.form.on("Expense Claim", {
 });
 
 frappe.ui.form.on("Expense Claim Detail", {
+    expenses_add(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (!row.expense_date) {
+            frappe.model.set_value(
+                cdt,
+                cdn,
+                "expense_date",
+                frm.doc.posting_date || frappe.datetime.nowdate(),
+            );
+        }
+    },
     expense_type(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
         if (row.expense_type) {
