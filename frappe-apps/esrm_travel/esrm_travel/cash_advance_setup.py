@@ -36,6 +36,7 @@ def setup_cash_advance_module():
     if not frappe.db.exists("DocType", "Employee Advance"):
         return
     setup_custom_fields()
+    setup_employee_advance_defaults()
     setup_company_defaults()
     setup_petty_cash_mode()
     setup_default_expense_approvers()
@@ -44,6 +45,37 @@ def setup_cash_advance_module():
     setup_employee_advance_workflow()
     setup_expense_claim_workflow()
     disable_unused_advance_accounts()
+
+
+def setup_employee_advance_defaults():
+    """Avoid exposing payroll setup while employees create cash requests."""
+    setters = (
+        ("currency", "fetch_from", "", "Data"),
+        ("currency", "default", "BDT", "Data"),
+    )
+    for field_name, property_name, value, property_type in setters:
+        existing = frappe.db.get_value(
+            "Property Setter",
+            {
+                "doc_type": "Employee Advance",
+                "field_name": field_name,
+                "property": property_name,
+            },
+        )
+        if existing:
+            frappe.db.set_value("Property Setter", existing, "value", value)
+        else:
+            frappe.make_property_setter(
+                {
+                    "doctype": "Employee Advance",
+                    "doctype_or_field": "DocField",
+                    "fieldname": field_name,
+                    "property": property_name,
+                    "value": value,
+                    "property_type": property_type,
+                },
+                module="ESRM Travel",
+            )
 
 
 def setup_custom_fields():
