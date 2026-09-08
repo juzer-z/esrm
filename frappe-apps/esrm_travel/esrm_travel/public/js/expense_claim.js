@@ -1,5 +1,10 @@
 frappe.ui.form.on("Expense Claim", {
     refresh(frm) {
+        frm.set_df_property("expense_approver", "read_only", 1);
+        if (frm.doc.docstatus === 0 && frm.doc.expense_approver !== "Administrator") {
+            frm.set_value("expense_approver", "Administrator");
+        }
+
         const roles = frappe.user_roles || [];
         const is_accounts = roles.includes("ESRM Accounts") || roles.includes("System Manager");
         if (!is_accounts) {

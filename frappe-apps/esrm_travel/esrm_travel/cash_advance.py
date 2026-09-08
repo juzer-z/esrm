@@ -53,6 +53,8 @@ def on_cancel_employee_advance(doc, method=None):
 
 
 def before_validate_expense_claim(doc, method=None):
+    doc.expense_approver = "Administrator"
+
     if not _is_privileged() and _roles() & EMPLOYEE_ROLES:
         employee = _employee_for_user()
         if not employee:
