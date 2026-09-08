@@ -8,12 +8,20 @@ frappe.ui.form.on("Employee Advance", {
             frm.set_df_property("advance_account", "hidden", 1);
             frm.set_df_property("mode_of_payment", "hidden", 1);
             frm.set_df_property("repay_unclaimed_amount_from_salary", "hidden", 1);
-            if (frm.is_new() && !frm.doc.currency) {
-                frm.set_value("currency", "BDT");
-            }
-            if (frm.is_new() && !frm.doc.employee) {
-                const employee = frappe.defaults.get_user_default("Employee");
-                if (employee) frm.set_value("employee", employee);
+            if (frm.is_new() && !frm.__esrm_defaults_loaded) {
+                frm.__esrm_defaults_loaded = true;
+                frappe.call({
+                    method: "esrm_travel.cash_advance.get_employee_advance_request_defaults",
+                    callback(r) {
+                        if (!r.message) return;
+                        Object.assign(frm.doc, r.message);
+                        frm.refresh_fields([
+                            "employee", "employee_name", "company", "department",
+                            "currency", "advance_account",
+                        ]);
+                        frm.dirty();
+                    },
+                });
             }
         }
 

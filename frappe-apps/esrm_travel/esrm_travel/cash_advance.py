@@ -25,6 +25,25 @@ def _employee_for_user(user=None):
     )
 
 
+@frappe.whitelist()
+def get_employee_advance_request_defaults():
+    """Return safe self-service defaults without reading payroll assignments."""
+    employee = _employee_for_user()
+    if not employee:
+        frappe.throw(_("Your user account must be linked to an active Employee before requesting cash."))
+    values = frappe.db.get_value(
+        "Employee", employee, ["employee_name", "company", "department"], as_dict=True
+    )
+    return {
+        "employee": employee,
+        "employee_name": values.employee_name,
+        "company": values.company,
+        "department": values.department,
+        "currency": frappe.db.get_value("Company", values.company, "default_currency") or "BDT",
+        "advance_account": ADVANCE_ACCOUNT,
+    }
+
+
 def before_validate_employee_advance(doc, method=None):
     if not _is_privileged() and _roles() & EMPLOYEE_ROLES:
         employee = _employee_for_user()
