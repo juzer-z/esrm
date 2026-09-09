@@ -324,6 +324,10 @@ def set_employee_user_defaults(user_name):
     if not employee:
         return
 
-    frappe.defaults.set_user_default("Employee", employee.name, user_name)
+    # Do not store Employee as a Frappe user default. HRMS applies that default
+    # before custom form scripts run and invokes its Salary Structure Assignment
+    # currency lookup. The cash-request form securely resolves the signed-in
+    # employee through get_employee_advance_request_defaults instead.
+    frappe.db.delete("DefaultValue", {"parent": user_name, "defkey": "Employee"})
     if employee.company:
         frappe.defaults.set_user_default("Company", employee.company, user_name)
