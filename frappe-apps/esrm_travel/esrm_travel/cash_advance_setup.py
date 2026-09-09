@@ -17,6 +17,7 @@ EXPENSE_TYPES = (
     ("Non-IATA Airline Ticket Cost - International", "Air Ticket Purchase- International"),
     ("Non-IATA Airline Ticket Cost - Domestic", "Air Ticket Purchase -Domestic"),
     ("Third-Party Visa Fee", "Visa & Other Service Expenses(Local)"),
+    ("Hotel Accommodation - Third Party", "Hotel Accommodation Expenses"),
     ("Local Conveyance", "Local Conveyance"),
     ("Travel and Daily Allowance", "TA & DA"),
     ("Fuel", "Fuel Cost"),

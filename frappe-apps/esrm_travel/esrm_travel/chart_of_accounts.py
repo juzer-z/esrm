@@ -104,6 +104,7 @@ ACCOUNT_LEDGERS = [
     ("Air Ticket Purchase -Domestic", "COST OF SERVICES", "Cost of Goods Sold"),
     ("Visa & Others Expenses(Foreign Employee)", "COST OF SERVICES", "Cost of Goods Sold"),
     ("Visa & Other Service Expenses(Local)", "COST OF SERVICES", "Cost of Goods Sold"),
+    ("Hotel Accommodation Expenses", "COST OF SERVICES", "Cost of Goods Sold"),
     ("Embassy Fee", "COST OF SERVICES", "Cost of Goods Sold"),
     ("BMET Registration", "COST OF SERVICES", "Cost of Goods Sold"),
     ("Work Permit & Security Clearance", "COST OF SERVICES", "Cost of Goods Sold"),
