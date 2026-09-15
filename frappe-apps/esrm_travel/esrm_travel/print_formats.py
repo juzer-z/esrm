@@ -301,16 +301,20 @@ def get_invoice_credit_summary(invoice_name):
             reissue = frappe.db.get_value(
                 "Ticket Booking",
                 row.ticket_booking,
-                ["reissue_status", "pending_invoice_amount", "pending_service_fee"],
+                [
+                    "reissue_status", "original_ticket_number", "pending_ticket_number",
+                    "pending_invoice_amount", "pending_service_fee",
+                ],
                 as_dict=True,
             )
             if reissue and reissue.reissue_status == "Reissued" and flt(reissue.pending_service_fee):
                 display_row["fare"] = flt(reissue.pending_invoice_amount)
+                display_row["ticket_number"] = reissue.original_ticket_number or display_row.get("ticket_number")
+                display_row["remarks"] = "REISSUED"
                 ticket_rows.append(display_row)
                 fee_row = dict(display_row)
                 fee_row.update({
-                    "passenger_name": "",
-                    "ticket_number": "",
+                    "ticket_number": reissue.pending_ticket_number or "",
                     "route": "",
                     "carrier": "",
                     "fare": flt(reissue.pending_service_fee),
@@ -563,6 +567,10 @@ ESRM_TICKET_INVOICE_HTML = """
         overflow-wrap: normal;
         word-break: normal;
         text-align: left;
+    }
+    .esrm-ticket-table .issue-date {
+        font-size: 7.1pt;
+        white-space: nowrap;
     }
     .esrm-ticket-table .remarks {
         font-size: 6.7pt;
@@ -825,10 +833,10 @@ ESRM_TICKET_INVOICE_HTML = """
         {% else %}
         <colgroup>
             <col style="width: 4%;">
-            <col style="width: 10%;">
+            <col style="width: 11%;">
             <col style="width: 19%;">
             <col style="width: 17%;">
-            <col style="width: 13%;">
+            <col style="width: 12%;">
             <col style="width: 7%;">
             <col style="width: 15%;">
             <col style="width: 15%;">
@@ -849,13 +857,13 @@ ESRM_TICKET_INVOICE_HTML = """
             {% for ticket in tickets %}
             <tr>
                 <td class="center">{{ loop.index }}</td>
-                <td class="center">{{ frappe.utils.formatdate(ticket.issue_date, "dd/MM/yyyy") if ticket.issue_date else "" }}</td>
+                <td class="center issue-date">{{ frappe.utils.formatdate(ticket.issue_date, "dd/MM/yyyy") if ticket.issue_date else "" }}</td>
                 <td class="passenger">{{ ticket.passenger_name or "" }}</td>
                 <td class="ticket-number">{{ ticket.ticket_number or "" }}</td>
                 <td class="route center">{{ ticket.route or "" }}</td>
                 <td class="center">{{ ticket.carrier or "" }}</td>
                 <td class="amount">{{ "{:,.2f}".format(ticket.fare or 0) }}</td>
-                <td class="remarks"><span{% if ticket.remarks in ["REFUND", "CANCELLATION FEE", "CANCELLED / REFUND"] %} class="status-remark"{% endif %}>{{ ticket.remarks or "" }}</span></td>
+                <td class="remarks"><span{% if ticket.remarks in ["REFUND", "CANCELLATION FEE", "CANCELLED / REFUND", "REISSUED", "REISSUE CHARGE"] %} class="status-remark"{% endif %}>{{ ticket.remarks or "" }}</span></td>
             </tr>
             {% endfor %}
             <tr class="esrm-total-row">
