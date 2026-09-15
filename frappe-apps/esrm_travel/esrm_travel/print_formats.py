@@ -297,6 +297,28 @@ def get_invoice_credit_summary(invoice_name):
                     }
                 )
                 ticket_rows.append(fee_row)
+        elif row.ticket_booking:
+            reissue = frappe.db.get_value(
+                "Ticket Booking",
+                row.ticket_booking,
+                ["reissue_status", "pending_invoice_amount", "pending_service_fee"],
+                as_dict=True,
+            )
+            if reissue and reissue.reissue_status == "Reissued" and flt(reissue.pending_service_fee):
+                display_row["fare"] = flt(reissue.pending_invoice_amount)
+                ticket_rows.append(display_row)
+                fee_row = dict(display_row)
+                fee_row.update({
+                    "passenger_name": "",
+                    "ticket_number": "",
+                    "route": "",
+                    "carrier": "",
+                    "fare": flt(reissue.pending_service_fee),
+                    "remarks": "REISSUE CHARGE",
+                })
+                ticket_rows.append(fee_row)
+            else:
+                ticket_rows.append(display_row)
         else:
             ticket_rows.append(display_row)
 

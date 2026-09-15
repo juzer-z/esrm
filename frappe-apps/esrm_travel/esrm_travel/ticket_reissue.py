@@ -133,7 +133,7 @@ def approve_ticket_reissue(booking_name):
     booking.flight_date = booking.pending_flight_date
     if booking.trip_type == "Return":
         booking.return_date = booking.pending_return_date or booking.return_date
-    booking.invoice_amount = booking.pending_invoice_amount
+    booking.invoice_amount = flt(booking.pending_invoice_amount) + flt(booking.pending_service_fee)
     booking.iata_amount = booking.pending_iata_amount
     if booking.pending_reissued_ticket:
         booking.uploaded_ticket = booking.pending_reissued_ticket
@@ -149,6 +149,25 @@ def approve_ticket_reissue(booking_name):
         _("The reissued ticket and revised invoice are now recorded."),
     )
     return {"booking": booking.name, "invoice": booking.sales_invoice}
+
+
+def repair_reissue_invoice(booking_name):
+    """Apply the separate reissue fee to an already-approved unpaid reissue."""
+    booking = _booking(booking_name)
+    if booking.reissue_status != "Reissued":
+        frappe.throw(_("Booking {0} is not an approved reissue.").format(booking.name))
+    expected_total = flt(booking.pending_invoice_amount) + flt(booking.pending_service_fee)
+    if expected_total <= 0:
+        frappe.throw(_("No revised invoice amount is recorded."))
+    if booking.sales_invoice:
+        invoice = frappe.get_doc("Sales Invoice", booking.sales_invoice)
+        if invoice.docstatus == 1 and flt(invoice.outstanding_amount) < flt(invoice.grand_total):
+            frappe.throw(_("The reissued invoice is partly or fully paid and cannot be replaced automatically."))
+    if flt(booking.invoice_amount) != expected_total:
+        booking.invoice_amount = expected_total
+        booking.amendment_reason = _("Add separately recorded ESRM reissue fee")
+        booking.save(ignore_permissions=True)
+    return {"booking": booking.name, "invoice": booking.sales_invoice, "total": expected_total}
 
 
 @frappe.whitelist()
