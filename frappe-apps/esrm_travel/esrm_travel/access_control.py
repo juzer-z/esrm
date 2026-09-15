@@ -68,7 +68,7 @@ def redirect_to_esrm_dashboard():
         return
 
     path = request.path.rstrip("/") or "/"
-    if path in {"/app", "/app/home", "/app/setup-wizard"}:
+    if path in {"/", "/app", "/app/home", "/app/setup-wizard"}:
         raise HTTPException(response=redirect("/app/esrm", code=302))
 
 
