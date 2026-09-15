@@ -36,6 +36,22 @@ AUTOMATIC_AFTER_SUBMIT_FIELDS = {
     "iata_adjustment_status",
     "iata_adjustment",
     "net_iata_cost",
+    "reissue_status",
+    "reissue_requested_by",
+    "reissue_requested_at",
+    "reissue_reason",
+    "original_ticket_number",
+    "original_flight_date",
+    "original_invoice_amount",
+    "original_iata_amount",
+    "pending_ticket_number",
+    "pending_flight_date",
+    "pending_return_date",
+    "pending_invoice_amount",
+    "pending_iata_amount",
+    "pending_reissue_penalty",
+    "pending_service_fee",
+    "pending_reissued_ticket",
 }
 IATA_ADJUSTMENT_INPUT_FIELDS = {
     "iata_credit_amount",
@@ -1281,6 +1297,13 @@ def get_invoice_due_date(bookings, invoice_posting_date=None):
 
 
 def build_invoice_ticket_row(booking, rate, remarks=None):
+    row_remarks = remarks if remarks is not None else booking.remarks
+    if booking.get("reissue_status") == "Reissued":
+        reissue_label = _("REISSUED FROM TICKET {0}").format(
+            booking.get("original_ticket_number") or _("N/A")
+        )
+        if reissue_label not in (row_remarks or ""):
+            row_remarks = "\n".join(filter(None, [reissue_label, row_remarks]))
     return {
         "ticket_booking": booking.name,
         "purpose": booking.purpose,
@@ -1291,7 +1314,7 @@ def build_invoice_ticket_row(booking, rate, remarks=None):
         "route": booking.route_summary,
         "carrier": get_ticket_carrier(booking),
         "fare": rate,
-        "remarks": remarks if remarks is not None else booking.remarks,
+        "remarks": row_remarks,
     }
 
 
@@ -1323,6 +1346,11 @@ def get_booking_invoice_row_amount(booking_name, sales_invoice):
 
 def build_invoice_description(booking):
     parts = [
+        (
+            f"REISSUED FROM TICKET {booking.original_ticket_number}"
+            if booking.get("reissue_status") == "Reissued" and booking.get("original_ticket_number")
+            else ""
+        ),
         f"Invoice No: {booking.invoice_number}" if booking.invoice_number else "",
         f"Passenger: {booking.passenger_name}" if booking.passenger_name else "",
         f"PNR: {booking.pnr}" if booking.pnr else "",

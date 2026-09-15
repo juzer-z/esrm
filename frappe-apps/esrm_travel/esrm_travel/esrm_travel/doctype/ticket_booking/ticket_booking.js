@@ -42,6 +42,7 @@ frappe.ui.form.on("Ticket Booking", {
     refresh(frm) {
         frm.set_df_property("booking_owner", "read_only", frappe.session.user !== "Administrator");
         setup_administrator_amendment(frm);
+        setup_ticket_reissue(frm);
         set_approved_cost_permissions(frm);
         add_administrator_draft_delete_action(frm);
         add_ticket_cancellation_action(frm);
@@ -122,6 +123,49 @@ function update_route_summary(frm) {
     }
 
     frm.set_value("route_summary", airports.join("-"));
+}
+
+function setup_ticket_reissue(frm) {
+    if (frm.is_new() || frm.doc.docstatus !== 1 || frm.doc.approval_status !== "Approved") return;
+    const roles = frappe.user_roles || [];
+    const can_request = frappe.session.user === "Administrator" || roles.includes("ESRM Agent");
+
+    if (can_request && frm.doc.reissue_status !== "Pending Approval") {
+        frm.add_custom_button(__("Reissue Ticket"), () => {
+            const dialog = new frappe.ui.Dialog({
+                title: __("Prepare Ticket Reissue"),
+                fields: [
+                    {fieldname: "new_ticket_number", label: __("New Ticket Number"), fieldtype: "Data", reqd: 1},
+                    {fieldname: "new_flight_date", label: __("New Flight Date"), fieldtype: "Date", reqd: 1},
+                    {fieldname: "new_return_date", label: __("New Return Date"), fieldtype: "Date", depends_on: "eval:doc.trip_type=='Return'"},
+                    {fieldname: "revised_invoice_amount", label: __("Revised Invoice Amount"), fieldtype: "Currency", reqd: 1, default: frm.doc.invoice_amount},
+                    {fieldname: "revised_iata_amount", label: __("Revised IATA Amount"), fieldtype: "Currency", default: frm.doc.iata_amount},
+                    {fieldname: "reissue_penalty", label: __("Airline Reissue Penalty"), fieldtype: "Currency", default: 0},
+                    {fieldname: "service_fee", label: __("ESRM Reissue Fee"), fieldtype: "Currency", default: 0},
+                    {fieldname: "reason", label: __("Reissue Reason"), fieldtype: "Small Text", reqd: 1},
+                    {fieldname: "attachment", label: __("Reissued Ticket"), fieldtype: "Attach"},
+                ],
+                primary_action_label: __("Send for Approval"),
+                primary_action(values) {
+                    frappe.call({method: "esrm_travel.ticket_reissue.request_ticket_reissue", args: {booking_name: frm.doc.name, ...values}, freeze: true,
+                        callback(r) { if (r.message) { dialog.hide(); frm.reload_doc(); } }});
+                },
+            });
+            dialog.show();
+        }, __("Actions"));
+    }
+
+    if (frappe.session.user === "Administrator" && frm.doc.reissue_status === "Pending Approval") {
+        frm.add_custom_button(__("Approve Reissue"), () => {
+            frappe.call({method: "esrm_travel.ticket_reissue.approve_ticket_reissue", args: {booking_name: frm.doc.name}, freeze: true,
+                freeze_message: __("Updating ticket and invoice..."), callback(r) { if (r.message) frm.reload_doc(); }});
+        }, __("Actions"));
+        frm.add_custom_button(__("Reject Reissue"), () => {
+            frappe.prompt([{fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1}],
+                (v) => frappe.call({method: "esrm_travel.ticket_reissue.reject_ticket_reissue", args: {booking_name: frm.doc.name, reason: v.reason}, callback() { frm.reload_doc(); }}),
+                __("Reject Reissue"), __("Reject"));
+        }, __("Actions"));
+    }
 }
 
 function calculate_profitability(frm) {
