@@ -81,6 +81,8 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
         frappe.throw(_("A reissue request is already pending approval."))
     if not new_ticket_number or not new_flight_date or not (reason or "").strip():
         frappe.throw(_("New ticket number, new flight date and reason are required."))
+    if booking.trip_type == "Return" and not (new_return_date or booking.return_date):
+        frappe.throw(_("New return date is required for a return trip."))
     if flt(revised_invoice_amount) <= 0:
         frappe.throw(_("Revised invoice amount must be greater than zero."))
     duplicate = frappe.db.exists("Ticket Booking", {
@@ -98,7 +100,8 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
         "original_ticket_number": booking.ticket_number, "original_flight_date": booking.flight_date,
         "original_invoice_amount": booking.invoice_amount, "original_iata_amount": booking.iata_amount,
         "pending_ticket_number": new_ticket_number, "pending_flight_date": new_flight_date,
-        "pending_return_date": new_return_date, "pending_invoice_amount": flt(revised_invoice_amount),
+        "pending_return_date": new_return_date or booking.return_date,
+        "pending_invoice_amount": flt(revised_invoice_amount),
         "pending_iata_amount": flt(revised_iata_amount), "pending_reissue_penalty": flt(reissue_penalty),
         "pending_service_fee": flt(service_fee), "pending_reissued_ticket": attachment,
     }
@@ -129,7 +132,7 @@ def approve_ticket_reissue(booking_name):
     booking.ticket_number = booking.pending_ticket_number
     booking.flight_date = booking.pending_flight_date
     if booking.trip_type == "Return":
-        booking.return_date = booking.pending_return_date
+        booking.return_date = booking.pending_return_date or booking.return_date
     booking.invoice_amount = booking.pending_invoice_amount
     booking.iata_amount = booking.pending_iata_amount
     if booking.pending_reissued_ticket:

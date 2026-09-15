@@ -137,7 +137,14 @@ function setup_ticket_reissue(frm) {
                 fields: [
                     {fieldname: "new_ticket_number", label: __("New Ticket Number"), fieldtype: "Data", reqd: 1},
                     {fieldname: "new_flight_date", label: __("New Flight Date"), fieldtype: "Date", reqd: 1},
-                    {fieldname: "new_return_date", label: __("New Return Date"), fieldtype: "Date", depends_on: "eval:doc.trip_type=='Return'"},
+                    {
+                        fieldname: "new_return_date",
+                        label: __("New Return Date"),
+                        fieldtype: "Date",
+                        hidden: frm.doc.trip_type !== "Return",
+                        reqd: frm.doc.trip_type === "Return",
+                        default: frm.doc.return_date,
+                    },
                     {fieldname: "revised_invoice_amount", label: __("Revised Invoice Amount"), fieldtype: "Currency", reqd: 1, default: frm.doc.invoice_amount},
                     {fieldname: "revised_iata_amount", label: __("Revised IATA Amount"), fieldtype: "Currency", default: frm.doc.iata_amount},
                     {fieldname: "reissue_penalty", label: __("Airline Reissue Penalty"), fieldtype: "Currency", default: 0},
