@@ -63,6 +63,30 @@ def _booking(name):
     return booking
 
 
+@frappe.whitelist()
+def find_ticket_booking(ticket_number):
+    ticket_number = (ticket_number or "").strip()
+    if not ticket_number:
+        frappe.throw(_("Enter a ticket number."))
+    matches = frappe.get_list(
+        "Ticket Booking",
+        filters={"docstatus": ["!=", 2]},
+        or_filters=[
+            ["ticket_number", "=", ticket_number],
+            ["reissued_ticket_number", "=", ticket_number],
+            ["original_ticket_number", "=", ticket_number],
+            ["pending_ticket_number", "=", ticket_number],
+        ],
+        fields=["name"],
+        limit_page_length=2,
+    )
+    if not matches:
+        frappe.throw(_("No Ticket Booking was found for ticket number {0}.").format(ticket_number))
+    if len(matches) > 1:
+        frappe.throw(_("More than one booking uses ticket number {0}. Please contact Administrator.").format(ticket_number))
+    return matches[0].name
+
+
 def _notify(user, booking, subject, message):
     if not user or user == "Guest" or not frappe.db.get_value("User", user, "enabled"):
         return

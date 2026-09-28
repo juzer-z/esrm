@@ -1,6 +1,20 @@
 frappe.listview_settings["Ticket Booking"] = {
     onload(listview) {
         bind_refreshing_workflow_actions(listview);
+        listview.page.add_inner_button(__("Find Ticket Number"), () => {
+            frappe.prompt([
+                {fieldname: "ticket_number", label: __("Original or Reissued Ticket Number"), fieldtype: "Data", reqd: 1},
+            ], (values) => {
+                frappe.call({
+                    method: "esrm_travel.ticket_reissue.find_ticket_booking",
+                    args: {ticket_number: values.ticket_number},
+                    freeze: true,
+                    callback(r) {
+                        if (r.message) frappe.set_route("Form", "Ticket Booking", r.message);
+                    },
+                });
+            }, __("Find Ticket Number"), __("Open Booking"));
+        });
 
         if (frappe.session.user !== "Administrator") {
             return;
