@@ -18,7 +18,6 @@ REISSUE_FIELDS = {
 
 def setup_ticket_reissue():
     create_custom_fields({"Ticket Booking": [
-        {"fieldname": "reissued_ticket_number", "label": "Reissued Ticket Number", "fieldtype": "Data", "insert_after": "ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1, "in_global_search": 1},
         {"fieldname": "reissue_section", "label": "Ticket Reissue", "fieldtype": "Section Break", "insert_after": "uploaded_ticket", "collapsible": 1},
         {"fieldname": "reissue_status", "label": "Reissue Status", "fieldtype": "Select", "options": "Not Requested\nPending Approval\nReissued\nRejected", "default": "Not Requested", "insert_after": "reissue_section", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1},
         {"fieldname": "reissue_requested_by", "label": "Requested By", "fieldtype": "Link", "options": "User", "insert_after": "reissue_status", "read_only": 1, "allow_on_submit": 1},
@@ -26,7 +25,8 @@ def setup_ticket_reissue():
         {"fieldname": "reissue_reason", "label": "Reissue Reason", "fieldtype": "Small Text", "insert_after": "reissue_requested_at", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_original_column", "fieldtype": "Column Break", "insert_after": "reissue_reason"},
         {"fieldname": "original_ticket_number", "label": "Original Ticket Number", "fieldtype": "Data", "insert_after": "reissue_original_column", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "original_flight_date", "label": "Original Flight Date", "fieldtype": "Date", "insert_after": "original_ticket_number", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "reissued_ticket_number", "label": "New / Reissued Ticket Number", "fieldtype": "Data", "insert_after": "original_ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1, "in_global_search": 1},
+        {"fieldname": "original_flight_date", "label": "Original Flight Date", "fieldtype": "Date", "insert_after": "reissued_ticket_number", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "original_invoice_amount", "label": "Original Invoice Amount", "fieldtype": "Currency", "insert_after": "original_flight_date", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "original_iata_amount", "label": "Original IATA Amount", "fieldtype": "Currency", "insert_after": "original_invoice_amount", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_proposed_section", "label": "Proposed Reissue", "fieldtype": "Section Break", "insert_after": "original_iata_amount", "collapsible": 1},
