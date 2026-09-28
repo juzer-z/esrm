@@ -1,7 +1,7 @@
 import frappe
 
 
-ADMIN_ONLY_NUMBER_CARDS = {"Profit"}
+ADMIN_ONLY_NUMBER_CARDS = {"Profit", "Visa Profit"}
 ADMIN_ONLY_CHARTS = {"ESRM Profit by Reference"}
 
 

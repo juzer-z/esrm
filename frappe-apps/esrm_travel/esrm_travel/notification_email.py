@@ -95,7 +95,7 @@ def _get_notification_category(notification):
     subject = strip_html(notification.subject or "").strip().lower()
     notification_type = (notification.type or "").strip().lower()
 
-    if notification.document_type == "Ticket Booking":
+    if notification.document_type in {"Ticket Booking", "Visa Service", "General Service Order"}:
         if subject.startswith("cost updated for ticket booking"):
             return "booking_cost_update"
         if subject.endswith("requires approval"):

@@ -35,6 +35,23 @@ def notify_service_approval(doc, method=None):
     notify_ticket_booking_approval(doc, method)
 
 
+def resend_pending_visa_approval_notifications():
+    """Reissue approval alerts for Visa Services already waiting for approval."""
+    sent = 0
+    for name in frappe.get_all(
+        "Visa Service",
+        filters={"approval_status": "Pending Approval", "docstatus": ["!=", 2]},
+        pluck="name",
+    ):
+        doc = frappe.get_doc("Visa Service", name)
+        subject, message = _get_message(doc, "Pending Approval")
+        document_url = get_url_to_form(doc.doctype, doc.name)
+        for user in _get_recipients(doc, "Pending Approval"):
+            _create_in_app_notification(user, doc, subject, message, document_url)
+            sent += 1
+    return {"notifications_created": sent}
+
+
 def notify_ticket_cost_entered(doc, method=None):
     previous = doc.get_doc_before_save()
     if (

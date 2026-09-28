@@ -362,6 +362,42 @@ def setup_number_cards():
             "filters_json": [["Ticket Booking", "docstatus", "!=", "2", False]],
             "color": "Red",
         },
+        {
+            "name": "Total Visa Services",
+            "label": "Total Visa Services",
+            "document_type": "Visa Service",
+            "function": "Count",
+            "aggregate_function_based_on": "name",
+            "filters_json": [["Visa Service", "docstatus", "!=", "2", False]],
+            "color": "Blue",
+        },
+        {
+            "name": "Pending Visa Approvals",
+            "label": "Pending Visa Approvals",
+            "document_type": "Visa Service",
+            "function": "Count",
+            "aggregate_function_based_on": "name",
+            "filters_json": [["Visa Service", "approval_status", "=", "Pending Approval", False]],
+            "color": "Orange",
+        },
+        {
+            "name": "Visa Outstanding Amount",
+            "label": "Visa Outstanding Amount",
+            "document_type": "Visa Service",
+            "function": "Sum",
+            "aggregate_function_based_on": "outstanding_amount",
+            "filters_json": [["Visa Service", "docstatus", "!=", "2", False]],
+            "color": "Red",
+        },
+        {
+            "name": "Visa Profit",
+            "label": "Visa Profit",
+            "document_type": "Visa Service",
+            "function": "Sum",
+            "aggregate_function_based_on": "profit",
+            "filters_json": [["Visa Service", "docstatus", "!=", "2", False]],
+            "color": "Green",
+        },
     ]
 
     for card in cards:
@@ -414,6 +450,15 @@ def setup_charts():
             "number_of_groups": 10,
             "custom_options": {"truncateLegends": 1},
         },
+        {
+            "name": "ESRM Visa Pipeline",
+            "chart_name": "ESRM Visa Pipeline",
+            "document_type": "Visa Service",
+            "type": "Donut",
+            "group_by_type": "Count",
+            "group_by_based_on": "application_status",
+            "custom_options": {"truncateLegends": 1, "maxSlices": 10},
+        },
     ]
 
     for chart in charts:
@@ -435,7 +480,10 @@ def upsert_chart(chart):
             "number_of_groups": chart.get("number_of_groups", 0),
             "is_public": 1,
             "is_standard": 0,
-            "filters_json": json.dumps([["Ticket Booking", "docstatus", "!=", "2", False]]),
+            "filters_json": json.dumps(
+                chart.get("filters_json")
+                or [[chart["document_type"], "docstatus", "!=", "2", False]]
+            ),
             "dynamic_filters_json": json.dumps([]),
             "custom_options": json.dumps(chart.get("custom_options", {})),
         }
@@ -486,11 +534,16 @@ NUMBER_CARDS = [
     ("Issued Today", "Issued Today"),
     ("Profit", "Profit"),
     ("Outstanding Amount", "Outstanding Amount"),
+    ("Total Visa Services", "Total Visa Services"),
+    ("Pending Visa Approvals", "Pending Visa Approvals"),
+    ("Visa Outstanding Amount", "Visa Outstanding Amount"),
+    ("Visa Profit", "Visa Profit"),
 ]
 
 CHARTS = [
     ("ESRM Booking Pipeline", "Booking Pipeline"),
     ("ESRM Profit by Reference", "Profit by Reference"),
+    ("ESRM Visa Pipeline", "Visa Pipeline"),
 ]
 
 SHORTCUTS = [
@@ -551,6 +604,13 @@ def get_workspace_content():
         number_card("Issued Today", 2),
         number_card("Profit", 3),
         number_card("Outstanding Amount", 3),
+        spacer(),
+        header("Visa Services at a Glance"),
+        number_card("Total Visa Services", 3),
+        number_card("Pending Visa Approvals", 3),
+        number_card("Visa Outstanding Amount", 3),
+        number_card("Visa Profit", 3),
+        chart("ESRM Visa Pipeline", 12),
         spacer(),
         header("Quick Workflows"),
         shortcut("Request Cash", 3),
