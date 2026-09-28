@@ -12,12 +12,13 @@ REISSUE_FIELDS = {
     "original_invoice_amount", "original_iata_amount", "pending_ticket_number",
     "pending_flight_date", "pending_return_date", "pending_invoice_amount",
     "pending_iata_amount", "pending_reissue_penalty", "pending_service_fee",
-    "pending_reissued_ticket",
+    "pending_reissued_ticket", "reissued_ticket_number", "reissue_iata_amount",
 }
 
 
 def setup_ticket_reissue():
     create_custom_fields({"Ticket Booking": [
+        {"fieldname": "reissued_ticket_number", "label": "Reissued Ticket Number", "fieldtype": "Data", "insert_after": "ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1, "in_global_search": 1},
         {"fieldname": "reissue_section", "label": "Ticket Reissue", "fieldtype": "Section Break", "insert_after": "uploaded_ticket", "collapsible": 1},
         {"fieldname": "reissue_status", "label": "Reissue Status", "fieldtype": "Select", "options": "Not Requested\nPending Approval\nReissued\nRejected", "default": "Not Requested", "insert_after": "reissue_section", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1},
         {"fieldname": "reissue_requested_by", "label": "Requested By", "fieldtype": "Link", "options": "User", "insert_after": "reissue_status", "read_only": 1, "allow_on_submit": 1},
@@ -34,11 +35,23 @@ def setup_ticket_reissue():
         {"fieldname": "pending_return_date", "label": "New Return Date", "fieldtype": "Date", "insert_after": "pending_flight_date", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "pending_invoice_amount", "label": "Revised Invoice Amount", "fieldtype": "Currency", "insert_after": "pending_return_date", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_proposed_column", "fieldtype": "Column Break", "insert_after": "pending_invoice_amount"},
-        {"fieldname": "pending_iata_amount", "label": "Revised IATA Amount", "fieldtype": "Currency", "insert_after": "reissue_proposed_column", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "pending_reissue_penalty", "label": "Airline Reissue Penalty", "fieldtype": "Currency", "insert_after": "pending_iata_amount", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "pending_iata_amount", "label": "Proposed Reissue IATA Amount", "fieldtype": "Currency", "insert_after": "reissue_proposed_column", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "reissue_iata_amount", "label": "Reissue IATA Amount", "fieldtype": "Currency", "insert_after": "pending_iata_amount", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "pending_reissue_penalty", "label": "Airline Reissue Penalty", "fieldtype": "Currency", "insert_after": "reissue_iata_amount", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "pending_service_fee", "label": "ESRM Reissue Fee", "fieldtype": "Currency", "insert_after": "pending_reissue_penalty", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "pending_reissued_ticket", "label": "Reissued Ticket", "fieldtype": "Attach", "insert_after": "pending_service_fee", "read_only": 1, "allow_on_submit": 1},
     ]}, update=True)
+    search_fields = "customer,passenger_name,pnr,ticket_number,reissued_ticket_number,original_ticket_number,pending_ticket_number,invoice_number,reference,airline,sales_invoice"
+    existing = frappe.db.get_value("Property Setter", {
+        "doc_type": "Ticket Booking", "doctype_or_field": "DocType", "property": "search_fields",
+    })
+    if existing:
+        frappe.db.set_value("Property Setter", existing, "value", search_fields)
+    else:
+        frappe.make_property_setter({
+            "doctype": "Ticket Booking", "doctype_or_field": "DocType",
+            "property": "search_fields", "value": search_fields, "property_type": "Data",
+        }, module="ESRM Travel")
     frappe.clear_cache(doctype="Ticket Booking")
 
 
@@ -90,6 +103,11 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
         "name": ["!=", booking.name],
         "docstatus": ["!=", 2],
     })
+    duplicate = duplicate or frappe.db.exists("Ticket Booking", {
+        "reissued_ticket_number": new_ticket_number,
+        "name": ["!=", booking.name],
+        "docstatus": ["!=", 2],
+    })
     if duplicate:
         frappe.throw(_("Ticket number {0} is already used in booking {1}.").format(
             new_ticket_number, duplicate
@@ -128,13 +146,16 @@ def approve_ticket_reissue(booking_name):
         invoice = frappe.get_doc("Sales Invoice", booking.sales_invoice)
         if invoice.docstatus == 1 and flt(invoice.outstanding_amount) < flt(invoice.grand_total):
             frappe.throw(_("The original invoice is partly or fully paid. Create a customer adjustment before approving this reissue."))
-    original_ticket = booking.ticket_number
-    booking.ticket_number = booking.pending_ticket_number
+    original_ticket = booking.original_ticket_number or booking.ticket_number
+    booking.ticket_number = original_ticket
+    booking.reissued_ticket_number = booking.pending_ticket_number
     booking.flight_date = booking.pending_flight_date
     if booking.trip_type == "Return":
         booking.return_date = booking.pending_return_date or booking.return_date
     booking.invoice_amount = flt(booking.pending_invoice_amount) + flt(booking.pending_service_fee)
-    booking.iata_amount = booking.pending_iata_amount
+    original_iata = flt(booking.original_iata_amount)
+    booking.reissue_iata_amount = flt(booking.pending_iata_amount)
+    booking.iata_amount = original_iata + booking.reissue_iata_amount
     if booking.pending_reissued_ticket:
         booking.uploaded_ticket = booking.pending_reissued_ticket
     booking.remarks = _("REISSUED from ticket {0} on {1}. {2}").format(
@@ -149,6 +170,62 @@ def approve_ticket_reissue(booking_name):
         _("The reissued ticket and revised invoice are now recorded."),
     )
     return {"booking": booking.name, "invoice": booking.sales_invoice}
+
+
+@frappe.whitelist()
+def update_reissue_iata_amount(booking_name, amount):
+    booking = _booking(booking_name)
+    if booking.reissue_status != "Reissued" or booking.payment_mode != "IATA":
+        frappe.throw(_("Reissue IATA amount is only available for an approved IATA reissue."))
+    if frappe.session.user != "Administrator" and booking.booking_owner != frappe.session.user:
+        frappe.throw(_("Only the booking owner or Administrator can enter this cost."), frappe.PermissionError)
+    if booking.iata_settlement_status == "Settled" or booking.iata_settlement:
+        frappe.throw(_("This ticket is already included in an IATA settlement."))
+    reissue_amount = flt(amount)
+    if reissue_amount <= 0:
+        frappe.throw(_("Reissue IATA amount must be greater than zero."))
+    original_iata = flt(booking.original_iata_amount)
+    total_iata = original_iata + reissue_amount
+    values = {
+        "reissue_iata_amount": reissue_amount,
+        "pending_iata_amount": reissue_amount,
+        "iata_amount": total_iata,
+        "net_iata_cost": total_iata - flt(booking.iata_credit_amount),
+        "cost_status": "Complete",
+        "cost_entered_by_owner": 1,
+        "commission": flt(booking.gross_amount) - total_iata,
+        "profit": flt(booking.invoice_amount) - total_iata,
+    }
+    frappe.db.set_value("Ticket Booking", booking.name, values, update_modified=True)
+    booking.add_comment("Info", _("Reissue IATA amount updated to {0}.").format(reissue_amount))
+    return {"reissue_iata_amount": reissue_amount, "total_iata_amount": total_iata}
+
+
+def repair_reissue_tracking(booking_name, original_ticket_number, reissued_ticket_number,
+    original_iata_amount, reissue_iata_amount):
+    booking = _booking(booking_name)
+    original_iata = flt(original_iata_amount)
+    reissue_iata = flt(reissue_iata_amount)
+    total_iata = original_iata + reissue_iata
+    values = {
+        "ticket_number": original_ticket_number,
+        "original_ticket_number": original_ticket_number,
+        "pending_ticket_number": reissued_ticket_number,
+        "reissued_ticket_number": reissued_ticket_number,
+        "original_iata_amount": original_iata,
+        "pending_iata_amount": reissue_iata,
+        "reissue_iata_amount": reissue_iata,
+        "iata_amount": total_iata,
+        "net_iata_cost": total_iata - flt(booking.iata_credit_amount),
+        "cost_status": "Complete",
+        "cost_entered_by_owner": 1,
+        "commission": flt(booking.gross_amount) - total_iata,
+        "profit": flt(booking.invoice_amount) - total_iata,
+    }
+    frappe.db.set_value("Ticket Booking", booking.name, values, update_modified=True)
+    booking.add_comment("Info", _("Original and reissue ticket/IATA details corrected."))
+    return {"booking": booking.name, "original_iata": original_iata,
+        "reissue_iata": reissue_iata, "total_iata": total_iata}
 
 
 def repair_reissue_invoice(booking_name):

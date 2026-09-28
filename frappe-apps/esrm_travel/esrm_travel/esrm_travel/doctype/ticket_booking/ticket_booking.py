@@ -52,6 +52,8 @@ AUTOMATIC_AFTER_SUBMIT_FIELDS = {
     "pending_reissue_penalty",
     "pending_service_fee",
     "pending_reissued_ticket",
+    "reissued_ticket_number",
+    "reissue_iata_amount",
 }
 IATA_ADJUSTMENT_INPUT_FIELDS = {
     "iata_credit_amount",

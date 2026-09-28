@@ -146,7 +146,8 @@ function setup_ticket_reissue(frm) {
                         default: frm.doc.return_date,
                     },
                     {fieldname: "revised_invoice_amount", label: __("Revised Invoice Amount"), fieldtype: "Currency", reqd: 1, default: frm.doc.invoice_amount},
-                    {fieldname: "revised_iata_amount", label: __("Revised IATA Amount"), fieldtype: "Currency", default: frm.doc.iata_amount},
+                    {fieldname: "revised_iata_amount", label: __("Reissue IATA Amount (optional)"), fieldtype: "Currency", default: 0,
+                        description: __("Can be entered later after approval.")},
                     {fieldname: "reissue_penalty", label: __("Airline Reissue Penalty"), fieldtype: "Currency", default: 0},
                     {fieldname: "service_fee", label: __("ESRM Reissue Fee"), fieldtype: "Currency", default: 0},
                     {fieldname: "reason", label: __("Reissue Reason"), fieldtype: "Small Text", reqd: 1},
@@ -171,6 +172,29 @@ function setup_ticket_reissue(frm) {
             frappe.prompt([{fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1}],
                 (v) => frappe.call({method: "esrm_travel.ticket_reissue.reject_ticket_reissue", args: {booking_name: frm.doc.name, reason: v.reason}, callback() { frm.reload_doc(); }}),
                 __("Reject Reissue"), __("Reject"));
+        }, __("Actions"));
+    }
+
+    const can_update_reissue_iata = (
+        frm.doc.reissue_status === "Reissued"
+        && frm.doc.payment_mode === "IATA"
+        && (frappe.session.user === "Administrator" || frappe.session.user === frm.doc.booking_owner)
+        && frm.doc.iata_settlement_status !== "Settled"
+        && !frm.doc.iata_settlement
+    );
+    if (can_update_reissue_iata) {
+        frm.add_custom_button(__("Update Reissue IATA Amount"), () => {
+            frappe.prompt([
+                {fieldname: "amount", label: __("Reissue IATA Amount"), fieldtype: "Currency", reqd: 1,
+                    default: frm.doc.reissue_iata_amount || frm.doc.pending_iata_amount || 0},
+            ], (values) => {
+                frappe.call({
+                    method: "esrm_travel.ticket_reissue.update_reissue_iata_amount",
+                    args: {booking_name: frm.doc.name, amount: values.amount},
+                    freeze: true,
+                    callback(r) { if (r.message) frm.reload_doc(); },
+                });
+            }, __("Update Reissue IATA Amount"), __("Update"));
         }, __("Actions"));
     }
 }
