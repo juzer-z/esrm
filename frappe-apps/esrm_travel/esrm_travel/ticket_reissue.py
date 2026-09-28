@@ -13,6 +13,7 @@ REISSUE_FIELDS = {
     "pending_flight_date", "pending_return_date", "pending_invoice_amount",
     "pending_iata_amount", "pending_reissue_penalty", "pending_service_fee",
     "pending_reissued_ticket", "reissued_ticket_number", "reissue_iata_amount",
+    "ticket_number_search",
 }
 
 
@@ -25,8 +26,9 @@ def setup_ticket_reissue():
         {"fieldname": "reissue_reason", "label": "Reissue Reason", "fieldtype": "Small Text", "insert_after": "reissue_requested_at", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_original_column", "fieldtype": "Column Break", "insert_after": "reissue_reason"},
         {"fieldname": "original_ticket_number", "label": "Original Ticket Number", "fieldtype": "Data", "insert_after": "reissue_original_column", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "reissued_ticket_number", "label": "New / Reissued Ticket Number", "fieldtype": "Data", "insert_after": "original_ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1, "in_global_search": 1},
-        {"fieldname": "original_flight_date", "label": "Original Flight Date", "fieldtype": "Date", "insert_after": "reissued_ticket_number", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "reissued_ticket_number", "label": "New / Reissued Ticket Number", "fieldtype": "Data", "insert_after": "original_ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 0, "in_global_search": 1},
+        {"fieldname": "ticket_number_search", "label": "Ticket Number", "fieldtype": "Data", "insert_after": "reissued_ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1, "in_global_search": 1, "depends_on": "eval:0"},
+        {"fieldname": "original_flight_date", "label": "Original Flight Date", "fieldtype": "Date", "insert_after": "ticket_number_search", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "original_invoice_amount", "label": "Original Invoice Amount", "fieldtype": "Currency", "insert_after": "original_flight_date", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "original_iata_amount", "label": "Original IATA Amount", "fieldtype": "Currency", "insert_after": "original_invoice_amount", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_proposed_section", "label": "Proposed Reissue", "fieldtype": "Section Break", "insert_after": "original_iata_amount", "collapsible": 1},
@@ -41,7 +43,7 @@ def setup_ticket_reissue():
         {"fieldname": "pending_service_fee", "label": "ESRM Reissue Fee", "fieldtype": "Currency", "insert_after": "pending_reissue_penalty", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "pending_reissued_ticket", "label": "Reissued Ticket", "fieldtype": "Attach", "insert_after": "pending_service_fee", "read_only": 1, "allow_on_submit": 1},
     ]}, update=True)
-    search_fields = "customer,passenger_name,pnr,ticket_number,reissued_ticket_number,original_ticket_number,pending_ticket_number,invoice_number,reference,airline,sales_invoice"
+    search_fields = "customer,passenger_name,pnr,ticket_number_search,ticket_number,reissued_ticket_number,original_ticket_number,pending_ticket_number,invoice_number,reference,airline,sales_invoice"
     existing = frappe.db.get_value("Property Setter", {
         "doc_type": "Ticket Booking", "doctype_or_field": "DocType", "property": "search_fields",
     })
@@ -52,6 +54,27 @@ def setup_ticket_reissue():
             "doctype": "Ticket Booking", "doctype_or_field": "DocType",
             "property": "search_fields", "value": search_fields, "property_type": "Data",
         }, module="ESRM Travel")
+    ticket_filter_setter = frappe.db.get_value("Property Setter", {
+        "doc_type": "Ticket Booking", "doctype_or_field": "DocField",
+        "field_name": "ticket_number", "property": "in_standard_filter",
+    })
+    if ticket_filter_setter:
+        frappe.db.set_value("Property Setter", ticket_filter_setter, "value", "0")
+    else:
+        frappe.make_property_setter({
+            "doctype": "Ticket Booking", "doctype_or_field": "DocField",
+            "fieldname": "ticket_number", "property": "in_standard_filter",
+            "value": "0", "property_type": "Check",
+        }, module="ESRM Travel")
+    frappe.db.sql(
+        """
+        update `tabTicket Booking`
+        set ticket_number_search = trim(concat_ws(' ',
+            nullif(ticket_number, ''), nullif(reissued_ticket_number, ''),
+            nullif(original_ticket_number, ''), nullif(pending_ticket_number, '')
+        ))
+        """
+    )
     frappe.clear_cache(doctype="Ticket Booking")
 
 
@@ -146,6 +169,7 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
         "pending_invoice_amount": flt(revised_invoice_amount),
         "pending_iata_amount": flt(revised_iata_amount), "pending_reissue_penalty": flt(reissue_penalty),
         "pending_service_fee": flt(service_fee), "pending_reissued_ticket": attachment,
+        "ticket_number_search": " ".join(filter(None, [booking.ticket_number, new_ticket_number])),
     }
     frappe.db.set_value("Ticket Booking", booking.name, values, update_modified=True)
     booking.add_comment("Info", _("Ticket reissue submitted for Administrator approval."))
@@ -173,6 +197,7 @@ def approve_ticket_reissue(booking_name):
     original_ticket = booking.original_ticket_number or booking.ticket_number
     booking.ticket_number = original_ticket
     booking.reissued_ticket_number = booking.pending_ticket_number
+    booking.ticket_number_search = " ".join(filter(None, [original_ticket, booking.pending_ticket_number]))
     booking.flight_date = booking.pending_flight_date
     if booking.trip_type == "Return":
         booking.return_date = booking.pending_return_date or booking.return_date
@@ -236,6 +261,7 @@ def repair_reissue_tracking(booking_name, original_ticket_number, reissued_ticke
         "original_ticket_number": original_ticket_number,
         "pending_ticket_number": reissued_ticket_number,
         "reissued_ticket_number": reissued_ticket_number,
+        "ticket_number_search": f"{original_ticket_number} {reissued_ticket_number}",
         "original_iata_amount": original_iata,
         "pending_iata_amount": reissue_iata,
         "reissue_iata_amount": reissue_iata,

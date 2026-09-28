@@ -54,6 +54,7 @@ AUTOMATIC_AFTER_SUBMIT_FIELDS = {
     "pending_reissued_ticket",
     "reissued_ticket_number",
     "reissue_iata_amount",
+    "ticket_number_search",
 }
 IATA_ADJUSTMENT_INPUT_FIELDS = {
     "iata_credit_amount",
@@ -102,6 +103,13 @@ class TicketBooking(Document):
             self.approval_status = "Draft"
         if not self.invoice_number:
             self.invoice_number = self.get_next_invoice_number()
+        if self.meta.has_field("ticket_number_search"):
+            self.ticket_number_search = " ".join(filter(None, [
+                self.ticket_number,
+                self.get("reissued_ticket_number"),
+                self.get("original_ticket_number"),
+                self.get("pending_ticket_number"),
+            ]))
 
     def validate(self):
         self.validate_travel_dates()
