@@ -28,6 +28,7 @@ doctype_js = {
 }
 
 doctype_list_js = {
+    "Ticket Booking": "public/js/ticket_booking_list.js",
     "Sales Invoice": "public/js/sales_invoice_list.js",
 }
 

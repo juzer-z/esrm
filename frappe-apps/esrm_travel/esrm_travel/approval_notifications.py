@@ -12,6 +12,9 @@ NOTIFIABLE_STATES = {"Pending Approval", "Approved", "Rejected"}
 
 def notify_ticket_booking_approval(doc, method=None):
     """Notify the next participants when a booking changes approval state."""
+    from esrm_travel.ticket_reissue import sync_pending_admin_approval
+
+    sync_pending_admin_approval(doc)
     previous = doc.get_doc_before_save()
     previous_state = previous.approval_status if previous else None
     current_state = doc.approval_status

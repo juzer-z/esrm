@@ -445,8 +445,8 @@ def get_pending_ticket_approval_count(filters=None):
     return {
         "value": count or 0,
         "fieldtype": "Int",
-        "route": ["query-report", "Pending Ticket Approvals"],
-        "route_options": {"approval_status": "Pending Approval"},
+        "route": ["List", "Ticket Booking", "List"],
+        "route_options": {"pending_admin_approval": 1},
     }
 
 
