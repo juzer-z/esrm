@@ -14,6 +14,7 @@ def get_columns():
     return [
         {"label": _("Booking"), "fieldname": "name", "fieldtype": "Link", "options": "Ticket Booking", "width": 160},
         {"label": _("Approval"), "fieldname": "approval_status", "fieldtype": "Data", "width": 130},
+        {"label": _("Reissue Approval"), "fieldname": "reissue_status", "fieldtype": "Data", "width": 130},
         {"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 170},
         {"label": _("Passenger"), "fieldname": "passenger_name", "fieldtype": "Data", "width": 170},
         {"label": _("Airline"), "fieldname": "airline", "fieldtype": "Data", "width": 130},
@@ -30,7 +31,12 @@ def get_data(filters):
     values = {}
 
     if filters.get("approval_status"):
-        conditions.append("tb.approval_status = %(approval_status)s")
+        if filters.approval_status == "Pending Approval":
+            conditions.append(
+                "(tb.approval_status = %(approval_status)s or tb.reissue_status = %(approval_status)s)"
+            )
+        else:
+            conditions.append("tb.approval_status = %(approval_status)s")
         values["approval_status"] = filters.approval_status
     for fieldname in ["customer", "booking_owner", "airline"]:
         if filters.get(fieldname):
@@ -53,6 +59,7 @@ def get_data(filters):
         select
             tb.name,
             tb.approval_status,
+            tb.reissue_status,
             tb.customer,
             tb.passenger_name,
             tb.airline,

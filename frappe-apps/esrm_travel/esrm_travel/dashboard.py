@@ -326,9 +326,8 @@ def setup_number_cards():
             "name": "Pending Approvals",
             "label": "Pending Approvals",
             "document_type": "Ticket Booking",
-            "function": "Count",
-            "aggregate_function_based_on": "name",
-            "filters_json": [["Ticket Booking", "approval_status", "=", "Pending Approval", False]],
+            "type": "Custom",
+            "method": "esrm_travel.dashboard.get_pending_ticket_approval_count",
             "color": "Orange",
         },
         {
@@ -411,11 +410,12 @@ def upsert_number_card(card):
         {
             "label": card["label"],
             "module": "ESRM Travel",
-            "type": "Document Type",
+            "type": card.get("type", "Document Type"),
             "document_type": card["document_type"],
-            "function": card["function"],
-            "aggregate_function_based_on": card["aggregate_function_based_on"],
-            "currency": currency if card["function"] == "Sum" else None,
+            "method": card.get("method"),
+            "function": card.get("function", "Count"),
+            "aggregate_function_based_on": card.get("aggregate_function_based_on"),
+            "currency": currency if card.get("function") == "Sum" else None,
             "is_public": 1,
             "show_full_number": 1,
             "show_percentage_stats": 0,
@@ -426,6 +426,28 @@ def upsert_number_card(card):
         }
     )
     save_doc(doc)
+
+
+@frappe.whitelist()
+def get_pending_ticket_approval_count(filters=None):
+    """Count distinct bookings awaiting either initial or reissue approval."""
+    count = frappe.db.sql(
+        """
+        select count(*)
+        from `tabTicket Booking`
+        where docstatus != 2
+          and (
+              approval_status = 'Pending Approval'
+              or reissue_status = 'Pending Approval'
+          )
+        """
+    )[0][0]
+    return {
+        "value": count or 0,
+        "fieldtype": "Int",
+        "route": ["query-report", "Pending Ticket Approvals"],
+        "route_options": {"approval_status": "Pending Approval"},
+    }
 
 
 def setup_charts():
