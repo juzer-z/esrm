@@ -128,6 +128,11 @@ def _make_zero_void_invoice(booking, original_invoice):
     void_invoice.amended_from = original_invoice.name
     void_invoice.posting_date = nowdate()
     void_invoice.due_date = nowdate()
+    for schedule in void_invoice.get("payment_schedule") or []:
+        schedule.due_date = void_invoice.posting_date
+        schedule.payment_amount = 0
+        schedule.base_payment_amount = 0
+        schedule.outstanding = 0
     void_invoice.remarks = _("VOIDED TICKET - ZERO PAYABLE. Ticket Booking {0}. Reason: {1}").format(
         booking.name, booking.void_reason
     )
