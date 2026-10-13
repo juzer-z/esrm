@@ -110,6 +110,9 @@ def _make_zero_void_invoice(booking, original_invoice):
     )
     booking.sales_invoice = None
     booking.void_original_invoice = None
+    # The two validated booking backlinks are deliberately managed above and
+    # restored/replaced below as part of this void workflow.
+    original_invoice.flags.ignore_links = True
     original_invoice.cancel()
     frappe.db.set_value(
         "Ticket Booking",
