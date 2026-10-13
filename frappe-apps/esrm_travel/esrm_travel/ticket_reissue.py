@@ -88,10 +88,17 @@ def setup_ticket_reissue():
     frappe.clear_cache(doctype="Ticket Booking")
 
 
-def _booking(name):
+def _booking(name, allow_pending_reissue=False):
     booking = frappe.get_doc("Ticket Booking", name)
     booking.check_permission("read")
-    if booking.docstatus != 1 or booking.approval_status != "Approved":
+    is_pending_reissue = (
+        allow_pending_reissue
+        and booking.reissue_status == "Pending Approval"
+        and booking.approval_status == "Pending Approval"
+    )
+    if booking.docstatus != 1 or (
+        booking.approval_status != "Approved" and not is_pending_reissue
+    ):
         frappe.throw(_("Only an approved Ticket Booking can be reissued."))
     return booking
 
@@ -198,7 +205,7 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
 def approve_ticket_reissue(booking_name):
     if frappe.session.user != "Administrator":
         frappe.throw(_("Only Administrator can approve a ticket reissue."), frappe.PermissionError)
-    booking = _booking(booking_name)
+    booking = _booking(booking_name, allow_pending_reissue=True)
     if booking.reissue_status != "Pending Approval":
         frappe.throw(_("This booking has no pending reissue request."))
     if booking.sales_invoice:
@@ -262,6 +269,36 @@ def bulk_approve_pending_bookings(booking_names):
             failed.append({"booking": name, "error": str(exc)})
 
     return {"approved": approved, "failed": failed}
+
+
+@frappe.whitelist()
+def bulk_reject_pending_bookings(booking_names, reason=None):
+    """Reject selected initial bookings and/or reissue requests."""
+    if frappe.session.user != "Administrator":
+        frappe.throw(_("Only Administrator can bulk reject bookings."), frappe.PermissionError)
+
+    names = frappe.parse_json(booking_names) if isinstance(booking_names, str) else booking_names
+    rejected = []
+    failed = []
+    for name in dict.fromkeys(names or []):
+        savepoint = f"bulk_reject_{len(rejected) + len(failed)}"
+        frappe.db.savepoint(savepoint)
+        try:
+            booking = frappe.get_doc("Ticket Booking", name)
+            if booking.reissue_status == "Pending Approval":
+                reject_ticket_reissue(name, reason)
+            elif booking.approval_status == "Pending Approval":
+                from frappe.model.workflow import apply_workflow
+
+                apply_workflow(booking, "Reject")
+            else:
+                frappe.throw(_("No pending approval was found."))
+            rejected.append(name)
+        except Exception as exc:
+            frappe.db.rollback(save_point=savepoint)
+            failed.append({"booking": name, "error": str(exc)})
+
+    return {"rejected": rejected, "failed": failed}
 
 
 @frappe.whitelist()

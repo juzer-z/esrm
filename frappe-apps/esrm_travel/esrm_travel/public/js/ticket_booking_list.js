@@ -2,7 +2,15 @@ frappe.listview_settings["Ticket Booking"] = {
     onload(listview) {
         if (frappe.session.user !== "Administrator") return;
 
-        listview.page.add_actions_menu_item(__("Approve Selected"), () => {
+        ["Approve", "Reject"].forEach((action) => {
+            const item = listview.workflow_action_items?.[action];
+            if (item) {
+                item.remove();
+                delete listview.workflow_action_items[action];
+            }
+        });
+
+        listview.page.add_actions_menu_item(__("Approve"), () => {
             const selected = listview.get_checked_items();
             if (!selected.length) {
                 frappe.msgprint(__("Select at least one pending booking."));
@@ -40,6 +48,39 @@ frappe.listview_settings["Ticket Booking"] = {
                         },
                     });
                 }
+            );
+        });
+
+        listview.page.add_actions_menu_item(__("Reject"), () => {
+            const selected = listview.get_checked_items();
+            if (!selected.length) {
+                frappe.msgprint(__("Select at least one pending booking."));
+                return;
+            }
+
+            frappe.prompt(
+                [{ fieldname: "reason", label: __("Reason"), fieldtype: "Small Text" }],
+                (values) => {
+                    frappe.call({
+                        method: "esrm_travel.ticket_reissue.bulk_reject_pending_bookings",
+                        args: {
+                            booking_names: selected.map((row) => row.name),
+                            reason: values.reason,
+                        },
+                        freeze: true,
+                        freeze_message: __("Rejecting selected bookings..."),
+                        callback(response) {
+                            const result = response.message || {};
+                            const failed = result.failed || [];
+                            if (failed.length) {
+                                frappe.msgprint(failed.map((row) => `${row.booking}: ${row.error}`).join("<br>"));
+                            }
+                            listview.refresh();
+                        },
+                    });
+                },
+                __("Reject Selected"),
+                __("Reject")
             );
         });
     },
