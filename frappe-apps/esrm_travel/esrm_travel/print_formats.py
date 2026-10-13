@@ -575,12 +575,14 @@ ESRM_TICKET_INVOICE_HTML = """
     .esrm-ticket-table .remarks {
         font-size: 6.7pt;
         line-height: 1.12;
-        overflow-wrap: normal;
+        overflow-wrap: anywhere;
         text-align: left;
-        word-break: normal;
+        word-break: break-word;
     }
     .esrm-ticket-table .status-remark {
-        white-space: nowrap;
+        display: inline-block;
+        max-width: 100%;
+        white-space: normal;
     }
     .esrm-visa-table th {
         font-size: 6.4pt;
