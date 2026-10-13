@@ -99,15 +99,26 @@ def _make_zero_void_invoice(booking, original_invoice):
     # ERPNext prevents cancelling a document while another submitted document
     # links to it. Temporarily clear the booking link inside this transaction;
     # cancellation hooks and the replacement invoice will restore the linkage.
+    # Both fields are Links to Sales Invoice.  Frappe blocks cancellation while
+    # either backlink exists, so clear both inside this transaction and restore
+    # the audit reference after the original invoice has been cancelled.
     frappe.db.set_value(
         "Ticket Booking",
         booking.name,
-        "sales_invoice",
-        None,
+        {"sales_invoice": None, "void_original_invoice": None},
         update_modified=False,
     )
     booking.sales_invoice = None
+    booking.void_original_invoice = None
     original_invoice.cancel()
+    frappe.db.set_value(
+        "Ticket Booking",
+        booking.name,
+        "void_original_invoice",
+        original_invoice.name,
+        update_modified=False,
+    )
+    booking.void_original_invoice = original_invoice.name
     void_invoice = frappe.copy_doc(original_invoice)
     void_invoice.name = None
     void_invoice.docstatus = 0
