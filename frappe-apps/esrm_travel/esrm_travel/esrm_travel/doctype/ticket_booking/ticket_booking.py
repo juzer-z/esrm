@@ -889,6 +889,9 @@ def create_ticket_credit_note(
     )
     credit_note.esrm_invoice_number = booking.invoice_number
     credit_note.esrm_ticket_booking = booking.name
+    # A ticket cancellation credit must reduce the outstanding balance of the
+    # original invoice rather than remain as a separate unallocated credit.
+    credit_note.update_outstanding_for_self = 0
     credit_note.set("esrm_ticket_bookings", [])
     credit_note.append(
         "esrm_ticket_bookings",
