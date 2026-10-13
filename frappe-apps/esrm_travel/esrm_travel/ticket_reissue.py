@@ -255,7 +255,11 @@ def bulk_approve_pending_bookings(booking_names):
         frappe.db.savepoint(savepoint)
         try:
             booking = frappe.get_doc("Ticket Booking", name)
-            if booking.reissue_status == "Pending Approval":
+            if booking.get("void_status") == "Pending Approval":
+                from esrm_travel.ticket_void import approve_ticket_void
+
+                approve_ticket_void(name)
+            elif booking.reissue_status == "Pending Approval":
                 approve_ticket_reissue(name)
             elif booking.approval_status == "Pending Approval":
                 from frappe.model.workflow import apply_workflow
@@ -285,7 +289,11 @@ def bulk_reject_pending_bookings(booking_names, reason=None):
         frappe.db.savepoint(savepoint)
         try:
             booking = frappe.get_doc("Ticket Booking", name)
-            if booking.reissue_status == "Pending Approval":
+            if booking.get("void_status") == "Pending Approval":
+                from esrm_travel.ticket_void import reject_ticket_void
+
+                reject_ticket_void(name, reason)
+            elif booking.reissue_status == "Pending Approval":
                 reject_ticket_reissue(name, reason)
             elif booking.approval_status == "Pending Approval":
                 from frappe.model.workflow import apply_workflow

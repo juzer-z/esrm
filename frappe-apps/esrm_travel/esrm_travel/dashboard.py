@@ -8,6 +8,7 @@ from esrm_travel.chart_of_accounts import get_company, setup_chart_of_accounts
 from esrm_travel.cash_advance_setup import setup_cash_advance_module
 from esrm_travel.print_formats import setup_print_formats
 from esrm_travel.workflow import backfill_sales_invoice_passenger_names
+from esrm_travel.ticket_void import setup_ticket_void
 
 
 def setup_workspace():
@@ -16,6 +17,7 @@ def setup_workspace():
     setup_chart_of_accounts()
     setup_cash_advance_module()
     setup_hrms()
+    setup_ticket_void()
     setup_general_service_defaults()
     setup_print_formats()
     backfill_sales_invoice_passenger_names()

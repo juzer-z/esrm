@@ -43,6 +43,7 @@ frappe.ui.form.on("Ticket Booking", {
         frm.set_df_property("booking_owner", "read_only", frappe.session.user !== "Administrator");
         setup_administrator_amendment(frm);
         setup_ticket_reissue(frm);
+        setup_ticket_void(frm);
         set_approved_cost_permissions(frm);
         add_administrator_draft_delete_action(frm);
         add_ticket_cancellation_action(frm);
@@ -195,6 +196,64 @@ function setup_ticket_reissue(frm) {
                     callback(r) { if (r.message) frm.reload_doc(); },
                 });
             }, __("Update Reissue IATA Amount"), __("Update"));
+        }, __("Actions"));
+    }
+}
+
+function setup_ticket_void(frm) {
+    if (frm.is_new() || frm.doc.docstatus !== 1) return;
+    const roles = frappe.user_roles || [];
+    const can_request = (
+        frm.doc.approval_status === "Approved"
+        && frm.doc.void_status !== "Pending Approval"
+        && frm.doc.void_status !== "Voided"
+        && (frappe.session.user === "Administrator" || roles.includes("ESRM Agent"))
+    );
+
+    if (can_request) {
+        frm.add_custom_button(__("Request Ticket Void"), () => {
+            frappe.prompt(
+                [{ fieldname: "reason", label: __("Void Reason"), fieldtype: "Small Text", reqd: 1 }],
+                (values) => frappe.call({
+                    method: "esrm_travel.ticket_void.request_ticket_void",
+                    args: { booking_name: frm.doc.name, reason: values.reason },
+                    freeze: true,
+                    callback: () => frm.reload_doc(),
+                }),
+                __("Request No-Charge Void"),
+                __("Send for Approval")
+            );
+        }, __("Actions"));
+    }
+
+    if (frappe.session.user === "Administrator" && frm.doc.void_status === "Pending Approval") {
+        frm.add_custom_button(__("Approve Ticket Void"), () => {
+            frappe.confirm(__("Void this ticket, cancel its receivable, and create a zero-payable invoice?"), () => {
+                frappe.call({
+                    method: "esrm_travel.ticket_void.approve_ticket_void",
+                    args: { booking_name: frm.doc.name },
+                    freeze: true,
+                    freeze_message: __("Voiding ticket..."),
+                    callback: (response) => {
+                        const result = response.message || {};
+                        frm.reload_doc().then(() => {
+                            if (result.invoice) frappe.set_route("Form", "Sales Invoice", result.invoice);
+                        });
+                    },
+                });
+            });
+        }, __("Actions"));
+        frm.add_custom_button(__("Reject Ticket Void"), () => {
+            frappe.prompt(
+                [{ fieldname: "reason", label: __("Reason"), fieldtype: "Small Text" }],
+                (values) => frappe.call({
+                    method: "esrm_travel.ticket_void.reject_ticket_void",
+                    args: { booking_name: frm.doc.name, reason: values.reason },
+                    callback: () => frm.reload_doc(),
+                }),
+                __("Reject Ticket Void"),
+                __("Reject")
+            );
         }, __("Actions"));
     }
 }
