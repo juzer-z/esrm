@@ -898,7 +898,7 @@ def create_ticket_credit_note(
         build_invoice_ticket_row(
             booking,
             -refund_amount,
-            remarks=_("REFUND"),
+            remarks=_("CANCELLED / REFUND"),
         ),
     )
     if cancellation_fee:
