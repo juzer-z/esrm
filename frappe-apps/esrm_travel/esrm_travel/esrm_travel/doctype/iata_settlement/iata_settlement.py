@@ -286,12 +286,25 @@ def get_eligible_bookings(period_from, period_to, current_settlement=None):
         select
             'Booking' as entry_type, null as iata_adjustment,
             tb.name as ticket_booking, tb.issue_date, tb.travel_type,
-            tb.passenger_name, tb.ticket_number, tb.route_summary, tb.iata_amount
+            tb.passenger_name, tb.ticket_number, tb.route_summary,
+            case
+                when tb.reissue_status = 'Reissued'
+                 and ifnull(tb.original_iata_amount, 0) > 0
+                 and ifnull(tb.reissue_iata_amount, 0) > 0
+                then tb.original_iata_amount + tb.reissue_iata_amount
+                else tb.iata_amount
+            end as iata_amount
         from `tabTicket Booking` tb
         where tb.docstatus = 1
           and tb.approval_status = 'Approved'
           and tb.payment_mode = 'IATA'
-          and ifnull(tb.iata_amount, 0) > 0
+          and (case
+                when tb.reissue_status = 'Reissued'
+                 and ifnull(tb.original_iata_amount, 0) > 0
+                 and ifnull(tb.reissue_iata_amount, 0) > 0
+                then tb.original_iata_amount + tb.reissue_iata_amount
+                else ifnull(tb.iata_amount, 0)
+              end) > 0
           and tb.issue_date between %(period_from)s and %(period_to)s
           and (
               ifnull(tb.iata_settlement, '') = ''

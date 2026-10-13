@@ -50,7 +50,14 @@ def get_data(filters):
             'Booking' as entry_type,
             tb.name, tb.issue_date, tb.passenger_name, tb.ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
-            tb.gross_amount, tb.invoice_amount, tb.iata_amount,
+            tb.gross_amount, tb.invoice_amount,
+            case
+                when tb.reissue_status = 'Reissued'
+                 and ifnull(tb.original_iata_amount, 0) > 0
+                 and ifnull(tb.reissue_iata_amount, 0) > 0
+                then tb.original_iata_amount + tb.reissue_iata_amount
+                else tb.iata_amount
+            end as iata_amount,
             coalesce(si.status, tb.invoice_status, 'Not Invoiced') as invoice_status
         from `tabTicket Booking` tb
         left join `tabSales Invoice` si on si.name = tb.sales_invoice
