@@ -14,7 +14,6 @@ REISSUE_FIELDS = {
     "pending_iata_amount", "pending_reissue_penalty", "pending_service_fee",
     "pending_reissued_ticket", "reissued_ticket_number", "reissue_iata_amount",
     "ticket_number_search",
-    "pending_admin_approval",
 }
 
 
@@ -43,8 +42,10 @@ def setup_ticket_reissue():
         {"fieldname": "pending_reissue_penalty", "label": "Airline Reissue Penalty", "fieldtype": "Currency", "insert_after": "reissue_iata_amount", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "pending_service_fee", "label": "ESRM Reissue Fee", "fieldtype": "Currency", "insert_after": "pending_reissue_penalty", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "pending_reissued_ticket", "label": "Reissued Ticket", "fieldtype": "Attach", "insert_after": "pending_service_fee", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "pending_admin_approval", "label": "Pending Administrator Approval", "fieldtype": "Check", "insert_after": "pending_reissued_ticket", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1, "depends_on": "eval:0"},
     ]}, update=True)
+    obsolete_field = "Ticket Booking-pending_admin_approval"
+    if frappe.db.exists("Custom Field", obsolete_field):
+        frappe.delete_doc("Custom Field", obsolete_field, ignore_permissions=True, force=True)
     search_fields = "customer,passenger_name,pnr,ticket_number_search,ticket_number,reissued_ticket_number,original_ticket_number,pending_ticket_number,invoice_number,reference,airline,sales_invoice"
     existing = frappe.db.get_value("Property Setter", {
         "doc_type": "Ticket Booking", "doctype_or_field": "DocType", "property": "search_fields",
@@ -80,9 +81,8 @@ def setup_ticket_reissue():
     frappe.db.sql(
         """
         update `tabTicket Booking`
-        set pending_admin_approval = if(
-            approval_status = 'Pending Approval' or reissue_status = 'Pending Approval', 1, 0
-        )
+        set approval_status = 'Pending Approval'
+        where reissue_status = 'Pending Approval' and docstatus != 2
         """
     )
     frappe.clear_cache(doctype="Ticket Booking")
@@ -170,8 +170,8 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
             new_ticket_number, duplicate
         ))
     values = {
-        "reissue_status": "Pending Approval", "reissue_requested_by": frappe.session.user,
-        "pending_admin_approval": 1,
+        "reissue_status": "Pending Approval", "approval_status": "Pending Approval",
+        "reissue_requested_by": frappe.session.user,
         "reissue_requested_at": now(), "reissue_reason": reason.strip(),
         "original_ticket_number": booking.ticket_number, "original_flight_date": booking.flight_date,
         "original_invoice_amount": booking.invoice_amount, "original_iata_amount": booking.iata_amount,
@@ -223,6 +223,8 @@ def approve_ticket_reissue(booking_name):
     )
     booking.amendment_reason = _("Ticket reissued: {0}").format(booking.reissue_reason)
     booking.reissue_status = "Reissued"
+    booking.approval_status = "Approved"
+    booking.flags.skip_approval_notification = True
     booking.save(ignore_permissions=True)
     _notify(
         booking.reissue_requested_by, booking,
@@ -230,22 +232,6 @@ def approve_ticket_reissue(booking_name):
         _("The reissued ticket and revised invoice are now recorded."),
     )
     return {"booking": booking.name, "invoice": booking.sales_invoice}
-
-
-def sync_pending_admin_approval(doc, method=None):
-    """Keep one list-view filter in sync with both approval workflows."""
-    pending = int(
-        doc.approval_status == "Pending Approval"
-        or doc.get("reissue_status") == "Pending Approval"
-    )
-    if doc.get("pending_admin_approval") != pending:
-        frappe.db.set_value(
-            "Ticket Booking",
-            doc.name,
-            "pending_admin_approval",
-            pending,
-            update_modified=False,
-        )
 
 
 @frappe.whitelist()
@@ -262,14 +248,13 @@ def bulk_approve_pending_bookings(booking_names):
         frappe.db.savepoint(savepoint)
         try:
             booking = frappe.get_doc("Ticket Booking", name)
-            if booking.approval_status == "Pending Approval":
+            if booking.reissue_status == "Pending Approval":
+                approve_ticket_reissue(name)
+            elif booking.approval_status == "Pending Approval":
                 from frappe.model.workflow import apply_workflow
 
                 apply_workflow(booking, "Approve")
-                booking = frappe.get_doc("Ticket Booking", name)
-            if booking.reissue_status == "Pending Approval":
-                approve_ticket_reissue(name)
-            elif booking.approval_status != "Approved":
+            else:
                 frappe.throw(_("No pending approval was found."))
             approved.append(name)
         except Exception as exc:
@@ -365,7 +350,7 @@ def reject_ticket_reissue(booking_name, reason=None):
     frappe.db.set_value(
         "Ticket Booking",
         booking.name,
-        {"reissue_status": "Rejected", "pending_admin_approval": 0},
+        {"reissue_status": "Rejected", "approval_status": "Approved"},
         update_modified=True,
     )
     booking.add_comment("Info", _("Ticket reissue rejected. {0}").format(reason or ""))

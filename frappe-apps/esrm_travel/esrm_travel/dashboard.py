@@ -430,23 +430,20 @@ def upsert_number_card(card):
 
 @frappe.whitelist()
 def get_pending_ticket_approval_count(filters=None):
-    """Count distinct bookings awaiting either initial or reissue approval."""
+    """Count bookings waiting in the single user-facing approval status."""
     count = frappe.db.sql(
         """
         select count(*)
         from `tabTicket Booking`
         where docstatus != 2
-          and (
-              approval_status = 'Pending Approval'
-              or reissue_status = 'Pending Approval'
-          )
+          and approval_status = 'Pending Approval'
         """
     )[0][0]
     return {
         "value": count or 0,
         "fieldtype": "Int",
         "route": ["List", "Ticket Booking", "List"],
-        "route_options": {"pending_admin_approval": 1},
+        "route_options": {"approval_status": "Pending Approval"},
     }
 
 
