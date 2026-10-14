@@ -71,8 +71,16 @@ def get_data(filters):
                 else 0
             end as reissue_iata_amount,
             case
-                when tb.reissue_status = 'Reissued' and ifnull(tb.reissue_iata_amount, 0) > 0
-                then tb.reissue_iata_amount
+                when tb.reissue_status = 'Reissued'
+                     and tb.issue_date between %(from_date)s and %(to_date)s
+                     and coalesce(tb.reissue_date, date(tb.reissue_requested_at)) between %(from_date)s and %(to_date)s
+                then ifnull(tb.original_iata_amount, 0) + ifnull(tb.reissue_iata_amount, 0)
+                when tb.reissue_status = 'Reissued'
+                     and coalesce(tb.reissue_date, date(tb.reissue_requested_at)) between %(from_date)s and %(to_date)s
+                then ifnull(tb.reissue_iata_amount, 0)
+                when tb.reissue_status = 'Reissued'
+                     and tb.issue_date between %(from_date)s and %(to_date)s
+                then ifnull(tb.original_iata_amount, tb.iata_amount)
                 else tb.iata_amount
             end as iata_amount,
             coalesce(si.status, tb.invoice_status, 'Not Invoiced') as invoice_status
