@@ -3,6 +3,7 @@ import frappe
 
 def execute():
     """Preserve legacy combined settlements while enabling component settlement links."""
+    frappe.reload_doc("esrm_travel", "doctype", "ticket_booking")
     frappe.db.sql(
         """
         update `tabTicket Booking`
