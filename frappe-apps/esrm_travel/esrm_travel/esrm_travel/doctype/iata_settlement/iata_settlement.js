@@ -5,12 +5,27 @@ frappe.ui.form.on("IATA Settlement", {
         if (frm.doc.docstatus === 0 && frm.doc.period_from && frm.doc.period_to) {
             frm.add_custom_button(__("Reload Verified Entries"), () => load_entries(frm));
         }
+        add_submit_action(frm);
         for (const fieldname of ["international_expense_account", "domestic_expense_account"]) {
             frm.set_query(fieldname, () => ({filters: {company: frm.doc.company, root_type: "Expense", is_group: 0, disabled: 0}}));
         }
         frm.set_query("source_account", "deposits", () => ({filters: {company: frm.doc.company, root_type: "Asset", is_group: 0, disabled: 0}}));
     },
 });
+
+function add_submit_action(frm) {
+    const can_submit = frappe.user.has_role("System Manager") || frappe.user.has_role("ESRM Approver");
+    if (frm.doc.docstatus !== 0 || frm.is_new() || frm.doc.status !== "Ready to Submit" || !can_submit) {
+        return;
+    }
+
+    frm.add_custom_button(__("Submit Settlement"), () => {
+        frappe.confirm(
+            __("Submit this IATA Settlement and create its Journal Entry?"),
+            () => frm.save("Submit")
+        );
+    }, __("Actions"));
+}
 
 frappe.ui.form.on("IATA Settlement Deposit", {
     deposits_add: recalculate_deposits,
