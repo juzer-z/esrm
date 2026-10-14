@@ -56,8 +56,8 @@ def get_data(filters):
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
             tb.gross_amount, tb.invoice_amount,
             case
-                when tb.reissue_status = 'Reissued' and ifnull(tb.original_iata_amount, 0) > 0
-                then tb.original_iata_amount
+                when tb.reissue_status = 'Reissued'
+                then ifnull(tb.original_iata_amount, 0)
                 else tb.iata_amount
             end as original_iata_amount,
             case
