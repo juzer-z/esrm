@@ -13,34 +13,35 @@ REISSUE_FIELDS = {
     "pending_flight_date", "pending_return_date", "pending_invoice_amount",
     "pending_iata_amount", "pending_reissue_penalty", "pending_service_fee",
     "pending_reissued_ticket", "reissued_ticket_number", "reissue_iata_amount",
-    "ticket_number_search",
+    "reissue_date", "ticket_number_search",
 }
 
 
 def setup_ticket_reissue():
     create_custom_fields({"Ticket Booking": [
-        {"fieldname": "reissue_section", "label": "Ticket Reissue", "fieldtype": "Section Break", "insert_after": "uploaded_ticket", "collapsible": 1},
+        {"fieldname": "reissue_section", "label": "Reissue Request & Original Details", "fieldtype": "Section Break", "insert_after": "uploaded_ticket", "collapsible": 1, "depends_on": "eval:doc.reissue_status && doc.reissue_status!='Not Requested'"},
         {"fieldname": "reissue_status", "label": "Reissue Status", "fieldtype": "Select", "options": "Not Requested\nPending Approval\nReissued\nRejected", "default": "Not Requested", "insert_after": "reissue_section", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1},
         {"fieldname": "reissue_requested_by", "label": "Requested By", "fieldtype": "Link", "options": "User", "insert_after": "reissue_status", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_requested_at", "label": "Requested At", "fieldtype": "Datetime", "insert_after": "reissue_requested_by", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_reason", "label": "Reissue Reason", "fieldtype": "Small Text", "insert_after": "reissue_requested_at", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "reissue_original_column", "fieldtype": "Column Break", "insert_after": "reissue_reason"},
         {"fieldname": "original_ticket_number", "label": "Original Ticket Number", "fieldtype": "Data", "insert_after": "reissue_original_column", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "reissued_ticket_number", "label": "New / Reissued Ticket Number", "fieldtype": "Data", "insert_after": "original_ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 0, "in_global_search": 1},
+        {"fieldname": "reissued_ticket_number", "label": "New / Reissued Ticket Number", "fieldtype": "Data", "insert_after": "original_ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 0, "in_global_search": 1, "depends_on": "eval:doc.reissue_status=='Reissued'"},
         {"fieldname": "ticket_number_search", "label": "Ticket Number", "fieldtype": "Data", "insert_after": "reissued_ticket_number", "read_only": 1, "allow_on_submit": 1, "in_standard_filter": 1, "in_global_search": 1, "depends_on": "eval:0"},
         {"fieldname": "original_flight_date", "label": "Original Flight Date", "fieldtype": "Date", "insert_after": "ticket_number_search", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "original_invoice_amount", "label": "Original Invoice Amount", "fieldtype": "Currency", "insert_after": "original_flight_date", "read_only": 1, "allow_on_submit": 1},
         {"fieldname": "original_iata_amount", "label": "Original IATA Amount", "fieldtype": "Currency", "insert_after": "original_invoice_amount", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "reissue_proposed_section", "label": "Proposed Reissue", "fieldtype": "Section Break", "insert_after": "original_iata_amount", "collapsible": 1},
-        {"fieldname": "pending_ticket_number", "label": "New Ticket Number", "fieldtype": "Data", "insert_after": "reissue_proposed_section", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "pending_flight_date", "label": "New Flight Date", "fieldtype": "Date", "insert_after": "pending_ticket_number", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "pending_return_date", "label": "New Return Date", "fieldtype": "Date", "insert_after": "pending_flight_date", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "pending_invoice_amount", "label": "Revised Invoice Amount", "fieldtype": "Currency", "insert_after": "pending_return_date", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "reissue_proposed_section", "label": "Reissue Details", "fieldtype": "Section Break", "insert_after": "original_iata_amount", "collapsible": 1, "depends_on": "eval:doc.reissue_status && doc.reissue_status!='Not Requested'"},
+        {"fieldname": "reissue_date", "label": "Reissue Date", "fieldtype": "Date", "insert_after": "reissue_proposed_section", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "pending_ticket_number", "label": "New Ticket Number", "fieldtype": "Data", "insert_after": "reissue_date", "read_only": 1, "allow_on_submit": 1, "depends_on": "eval:doc.reissue_status=='Pending Approval'"},
+        {"fieldname": "pending_flight_date", "label": "New Flight Date", "fieldtype": "Date", "insert_after": "pending_ticket_number", "read_only": 1, "allow_on_submit": 1, "depends_on": "eval:doc.reissue_status=='Pending Approval'"},
+        {"fieldname": "pending_return_date", "label": "New Return Date", "fieldtype": "Date", "insert_after": "pending_flight_date", "read_only": 1, "allow_on_submit": 1, "depends_on": "eval:doc.reissue_status=='Pending Approval'"},
+        {"fieldname": "pending_invoice_amount", "label": "Revised Invoice Amount", "fieldtype": "Currency", "insert_after": "pending_return_date", "read_only": 1, "allow_on_submit": 1, "depends_on": "eval:doc.reissue_status=='Pending Approval'"},
         {"fieldname": "reissue_proposed_column", "fieldtype": "Column Break", "insert_after": "pending_invoice_amount"},
-        {"fieldname": "pending_iata_amount", "label": "Proposed Reissue IATA Amount", "fieldtype": "Currency", "insert_after": "reissue_proposed_column", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "reissue_iata_amount", "label": "Reissue IATA Amount", "fieldtype": "Currency", "insert_after": "pending_iata_amount", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "pending_reissue_penalty", "label": "Airline Reissue Penalty", "fieldtype": "Currency", "insert_after": "reissue_iata_amount", "read_only": 1, "allow_on_submit": 1},
-        {"fieldname": "pending_service_fee", "label": "ESRM Reissue Fee", "fieldtype": "Currency", "insert_after": "pending_reissue_penalty", "read_only": 1, "allow_on_submit": 1},
+        {"fieldname": "pending_iata_amount", "label": "Proposed Reissue IATA Amount", "fieldtype": "Currency", "insert_after": "reissue_proposed_column", "read_only": 1, "allow_on_submit": 1, "depends_on": "eval:doc.reissue_status=='Pending Approval'", "description": "Incremental amount payable to the airline for this reissue only."},
+        {"fieldname": "reissue_iata_amount", "label": "Reissue IATA Amount", "fieldtype": "Currency", "insert_after": "pending_iata_amount", "read_only": 1, "allow_on_submit": 1, "depends_on": "eval:doc.reissue_status=='Reissued'", "description": "Final incremental IATA amount for this reissue only."},
+        {"fieldname": "pending_reissue_penalty", "label": "Airline Reissue Penalty", "fieldtype": "Currency", "insert_after": "reissue_iata_amount", "read_only": 1, "allow_on_submit": 1, "description": "Informational penalty charged by the airline; do not add it again if already included in the reissue IATA amount."},
+        {"fieldname": "pending_service_fee", "label": "ESRM Reissue Fee", "fieldtype": "Currency", "insert_after": "pending_reissue_penalty", "read_only": 1, "allow_on_submit": 1, "description": "Additional fee charged by ESRM to the customer."},
         {"fieldname": "pending_reissued_ticket", "label": "Reissued Ticket", "fieldtype": "Attach", "insert_after": "pending_service_fee", "read_only": 1, "allow_on_submit": 1},
     ]}, update=True)
     obsolete_field = "Ticket Booking-pending_admin_approval"
@@ -76,6 +77,23 @@ def setup_ticket_reissue():
             nullif(ticket_number, ''), nullif(reissued_ticket_number, ''),
             nullif(original_ticket_number, ''), nullif(pending_ticket_number, '')
         ))
+        """
+    )
+    frappe.db.sql(
+        """
+        update `tabTicket Booking`
+        set reissue_date = date(reissue_requested_at)
+        where reissue_status in ('Pending Approval', 'Reissued', 'Rejected')
+          and reissue_date is null and reissue_requested_at is not null
+        """
+    )
+    frappe.db.sql(
+        """
+        update `tabTicket Booking`
+        set reissued_ticket_number = pending_ticket_number
+        where reissue_status = 'Reissued'
+          and ifnull(reissued_ticket_number, '') = ''
+          and ifnull(pending_ticket_number, '') != ''
         """
     )
     frappe.db.sql(
@@ -146,7 +164,7 @@ def _notify(user, booking, subject, message):
 
 @frappe.whitelist()
 def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
-    revised_invoice_amount, revised_iata_amount=0, new_return_date=None,
+    revised_invoice_amount, reissue_date=None, revised_iata_amount=0, new_return_date=None,
     reissue_penalty=0, service_fee=0, reason=None, attachment=None):
     booking = _booking(booking_name)
     roles = set(frappe.get_roles())
@@ -156,8 +174,8 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
         frappe.throw(_("You can only reissue a booking assigned to you."), frappe.PermissionError)
     if booking.reissue_status == "Pending Approval":
         frappe.throw(_("A reissue request is already pending approval."))
-    if not new_ticket_number or not new_flight_date or not (reason or "").strip():
-        frappe.throw(_("New ticket number, new flight date and reason are required."))
+    if not new_ticket_number or not new_flight_date or not reissue_date or not (reason or "").strip():
+        frappe.throw(_("Reissue date, new ticket number, new flight date and reason are required."))
     if booking.trip_type == "Return" and not (new_return_date or booking.return_date):
         frappe.throw(_("New return date is required for a return trip."))
     if flt(revised_invoice_amount) <= 0:
@@ -179,7 +197,7 @@ def request_ticket_reissue(booking_name, new_ticket_number, new_flight_date,
     values = {
         "reissue_status": "Pending Approval", "approval_status": "Pending Approval",
         "reissue_requested_by": frappe.session.user,
-        "reissue_requested_at": now(), "reissue_reason": reason.strip(),
+        "reissue_requested_at": now(), "reissue_date": reissue_date, "reissue_reason": reason.strip(),
         "original_ticket_number": booking.ticket_number, "original_flight_date": booking.flight_date,
         "original_invoice_amount": booking.invoice_amount, "original_iata_amount": booking.iata_amount,
         "pending_ticket_number": new_ticket_number, "pending_flight_date": new_flight_date,
@@ -226,7 +244,7 @@ def approve_ticket_reissue(booking_name):
     if booking.pending_reissued_ticket:
         booking.uploaded_ticket = booking.pending_reissued_ticket
     booking.remarks = _("REISSUED from ticket {0} on {1}. {2}").format(
-        original_ticket or booking.name, nowdate(), booking.reissue_reason
+        original_ticket or booking.name, booking.reissue_date or nowdate(), booking.reissue_reason
     )
     booking.amendment_reason = _("Ticket reissued: {0}").format(booking.reissue_reason)
     booking.reissue_status = "Reissued"

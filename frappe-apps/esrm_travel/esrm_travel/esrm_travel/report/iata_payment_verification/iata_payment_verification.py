@@ -29,6 +29,7 @@ def validate_filters(filters=None):
 def get_columns():
     return [
         {"label": _("Issue Date"), "fieldname": "issue_date", "fieldtype": "Date", "width": 100},
+        {"label": _("Reissue Date"), "fieldname": "reissue_date", "fieldtype": "Date", "width": 100},
         {"label": _("Booking / Memo"), "fieldname": "name", "fieldtype": "Data", "width": 135},
         {"label": _("Passenger"), "fieldname": "passenger_name", "fieldtype": "Data", "width": 180},
         {"label": _("Original Ticket"), "fieldname": "ticket_number", "fieldtype": "Data", "width": 145},
@@ -49,7 +50,9 @@ def get_data(filters):
         """
         select
             'Booking' as entry_type,
-            tb.name, tb.issue_date, tb.passenger_name,
+            tb.name, tb.issue_date,
+            case when tb.reissue_status = 'Reissued' then tb.reissue_date else null end as reissue_date,
+            tb.passenger_name,
             case
                 when tb.reissue_status = 'Reissued'
                 then coalesce(nullif(tb.original_ticket_number, ''), tb.ticket_number)
@@ -82,13 +85,14 @@ def get_data(filters):
               tb.issue_date between %(from_date)s and %(to_date)s
               or (
                   tb.reissue_status = 'Reissued'
-                  and date(tb.reissue_requested_at) between %(from_date)s and %(to_date)s
+                  and coalesce(tb.reissue_date, date(tb.reissue_requested_at)) between %(from_date)s and %(to_date)s
               )
           )
         union all
         select
             'Adjustment' as entry_type,
-            tb.name, adj.adjustment_date as issue_date, tb.passenger_name, tb.ticket_number,
+            tb.name, adj.adjustment_date as issue_date, null as reissue_date,
+            tb.passenger_name, tb.ticket_number,
             '' as reissued_ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
             0 as gross_amount, 0 as invoice_amount,
@@ -103,7 +107,7 @@ def get_data(filters):
         union all
         select
             memo.memo_type as entry_type, memo.memo_number as name,
-            memo.memo_date as issue_date,
+            memo.memo_date as issue_date, null as reissue_date,
             concat(memo.memo_type, ' - Airline ', coalesce(nullif(memo.airline_code, ''), 'N/A')) as passenger_name,
             coalesce(memo.ticket_number, '') as ticket_number, '' as reissued_ticket_number,
             '' as pnr, '' as route_summary,
@@ -118,7 +122,7 @@ def get_data(filters):
         union all
         select
             legacy.memo_type as entry_type, legacy.memo_number as name,
-            legacy.memo_date as issue_date,
+            legacy.memo_date as issue_date, null as reissue_date,
             concat(legacy.memo_type, ' - Legacy Settlement Memo') as passenger_name,
             '' as ticket_number, '' as reissued_ticket_number, '' as pnr, '' as route_summary,
             legacy.airline_code as airline, '' as customer,

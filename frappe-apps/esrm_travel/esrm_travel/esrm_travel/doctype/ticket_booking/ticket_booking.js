@@ -136,6 +136,7 @@ function setup_ticket_reissue(frm) {
             const dialog = new frappe.ui.Dialog({
                 title: __("Prepare Ticket Reissue"),
                 fields: [
+                    {fieldname: "reissue_date", label: __("Reissue Date"), fieldtype: "Date", reqd: 1, default: frappe.datetime.get_today()},
                     {fieldname: "new_ticket_number", label: __("New Ticket Number"), fieldtype: "Data", reqd: 1},
                     {fieldname: "new_flight_date", label: __("New Flight Date"), fieldtype: "Date", reqd: 1},
                     {
