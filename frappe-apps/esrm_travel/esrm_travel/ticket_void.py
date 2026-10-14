@@ -162,7 +162,7 @@ def approve_ticket_void(booking_name):
     booking = frappe.get_doc("Ticket Booking", booking_name)
     if booking.void_status != "Pending Approval":
         frappe.throw(_("This booking has no pending void request."))
-    if booking.iata_settlement or booking.iata_settlement_status == "Settled":
+    if booking.iata_settlement or booking.original_iata_settlement or booking.reissue_iata_settlement:
         frappe.throw(_("Remove this ticket from its IATA settlement before voiding it."))
     if not booking.sales_invoice:
         frappe.throw(_("The booking has no linked Sales Invoice."))

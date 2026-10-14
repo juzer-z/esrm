@@ -43,6 +43,8 @@
   "gross_amount",
   "iata_amount",
   "iata_settlement",
+  "original_iata_settlement",
+  "reissue_iata_settlement",
   "iata_settlement_status",
   "supplier_cost",
   "cost_status",
@@ -346,13 +348,31 @@
   },
   {
    "allow_on_submit": 1,
+   "fieldname": "original_iata_settlement",
+   "fieldtype": "Link",
+   "label": "Original IATA Settlement",
+   "no_copy": 1,
+   "options": "IATA Settlement",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "reissue_iata_settlement",
+   "fieldtype": "Link",
+   "label": "Reissue IATA Settlement",
+   "no_copy": 1,
+   "options": "IATA Settlement",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
    "default": "Unsettled",
    "fieldname": "iata_settlement_status",
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "IATA Settlement Status",
    "no_copy": 1,
-   "options": "Unsettled\nSettled",
+   "options": "Unsettled\nPartially Settled\nSettled",
    "read_only": 1
   },
   {

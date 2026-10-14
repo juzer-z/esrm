@@ -241,6 +241,10 @@ def approve_ticket_reissue(booking_name):
     original_iata = flt(booking.original_iata_amount)
     booking.reissue_iata_amount = flt(booking.pending_iata_amount)
     booking.iata_amount = original_iata + booking.reissue_iata_amount
+    if booking.iata_settlement and not booking.original_iata_settlement:
+        booking.original_iata_settlement = booking.iata_settlement
+        booking.iata_settlement = None
+        booking.iata_settlement_status = "Partially Settled"
     if booking.pending_reissued_ticket:
         booking.uploaded_ticket = booking.pending_reissued_ticket
     booking.remarks = _("REISSUED from ticket {0} on {1}. {2}").format(
@@ -334,8 +338,8 @@ def update_reissue_iata_amount(booking_name, amount):
         frappe.throw(_("Reissue IATA amount is only available for an approved IATA reissue."))
     if frappe.session.user != "Administrator" and booking.booking_owner != frappe.session.user:
         frappe.throw(_("Only the booking owner or Administrator can enter this cost."), frappe.PermissionError)
-    if booking.iata_settlement_status == "Settled" or booking.iata_settlement:
-        frappe.throw(_("This ticket is already included in an IATA settlement."))
+    if booking.reissue_iata_settlement or booking.iata_settlement:
+        frappe.throw(_("The reissue cost is already included in an IATA settlement."))
     reissue_amount = flt(amount)
     if reissue_amount <= 0:
         frappe.throw(_("Reissue IATA amount must be greater than zero."))

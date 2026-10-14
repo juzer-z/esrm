@@ -90,16 +90,17 @@ class IATASettlement(Document):
                         update_modified=False,
                     )
                 continue
-            current = frappe.db.get_value(
-                "Ticket Booking", row.ticket_booking, "iata_settlement"
-            )
+            settlement_field = _settlement_field_for_entry(row.entry_type)
+            current = frappe.db.get_value("Ticket Booking", row.ticket_booking, settlement_field)
             if current == self.name:
                 frappe.db.set_value(
                     "Ticket Booking",
                     row.ticket_booking,
-                    {"iata_settlement": None, "iata_settlement_status": "Unsettled"},
+                    settlement_field,
+                    None,
                     update_modified=False,
                 )
+                _refresh_ticket_settlement_status(row.ticket_booking)
         for row in self.registered_memos:
             if frappe.db.get_value("IATA Memo", row.iata_memo, "iata_settlement") == self.name:
                 frappe.db.set_value("IATA Memo", row.iata_memo, {"iata_settlement": None, "status": "Unsettled"}, update_modified=False)
@@ -172,21 +173,16 @@ class IATASettlement(Document):
                 frappe.throw(_("Paid From account {0} must be an active asset account for this company.").format(row.source_account))
 
     def validate_not_already_settled(self):
-        booking_names = [row.ticket_booking for row in self.bookings if not row.iata_adjustment]
         adjustment_names = [row.iata_adjustment for row in self.bookings if row.iata_adjustment]
         memo_names = [row.iata_memo for row in self.registered_memos]
         conflicts = []
-        if booking_names:
-            conflicts.extend(frappe.db.sql(
-                """
-                select name, iata_settlement
-                from `tabTicket Booking`
-                where name in %(names)s
-                  and ifnull(iata_settlement, '') not in ('', %(current_settlement)s)
-                """,
-                {"names": booking_names, "current_settlement": self.name},
-                as_dict=True,
-            ))
+        for row in self.bookings:
+            if row.iata_adjustment:
+                continue
+            settlement_field = _settlement_field_for_entry(row.entry_type)
+            existing = frappe.db.get_value("Ticket Booking", row.ticket_booking, settlement_field)
+            if existing and existing != self.name:
+                conflicts.append(frappe._dict(name=f"{row.ticket_booking} ({row.entry_type})", iata_settlement=existing))
         if adjustment_names:
             conflicts.extend(frappe.db.sql(
                 """
@@ -268,9 +264,11 @@ class IATASettlement(Document):
             frappe.db.set_value(
                 "Ticket Booking",
                 row.ticket_booking,
-                {"iata_settlement": self.name, "iata_settlement_status": "Settled"},
+                _settlement_field_for_entry(row.entry_type),
+                self.name,
                 update_modified=False,
             )
+            _refresh_ticket_settlement_status(row.ticket_booking)
         for row in self.registered_memos:
             frappe.db.set_value("IATA Memo", row.iata_memo, {"iata_settlement": self.name, "status": "Settled"}, update_modified=False)
 
@@ -284,33 +282,48 @@ def get_eligible_bookings(period_from, period_to, current_settlement=None):
     bookings = frappe.db.sql(
         """
         select
-            'Booking' as entry_type, null as iata_adjustment,
+            case when tb.reissue_status = 'Reissued' then 'Original' else 'Booking' end as entry_type,
+            null as iata_adjustment,
             tb.name as ticket_booking, tb.issue_date, tb.travel_type,
-            tb.passenger_name, tb.ticket_number, tb.route_summary,
+            tb.passenger_name,
             case
-                when tb.reissue_status = 'Reissued'
-                 and ifnull(tb.original_iata_amount, 0) > 0
-                 and ifnull(tb.reissue_iata_amount, 0) > 0
-                then tb.original_iata_amount + tb.reissue_iata_amount
+                when tb.reissue_status = 'Reissued' then coalesce(nullif(tb.original_ticket_number, ''), tb.ticket_number)
+                else tb.ticket_number
+            end as ticket_number,
+            tb.route_summary,
+            case
+                when tb.reissue_status = 'Reissued' then ifnull(tb.original_iata_amount, tb.iata_amount)
                 else tb.iata_amount
             end as iata_amount
         from `tabTicket Booking` tb
         where tb.docstatus = 1
           and tb.approval_status = 'Approved'
           and tb.payment_mode = 'IATA'
-          and (case
-                when tb.reissue_status = 'Reissued'
-                 and ifnull(tb.original_iata_amount, 0) > 0
-                 and ifnull(tb.reissue_iata_amount, 0) > 0
-                then tb.original_iata_amount + tb.reissue_iata_amount
-                else ifnull(tb.iata_amount, 0)
-              end) > 0
+          and (case when tb.reissue_status = 'Reissued'
+                    then ifnull(tb.original_iata_amount, tb.iata_amount)
+                    else ifnull(tb.iata_amount, 0) end) > 0
           and tb.issue_date between %(period_from)s and %(period_to)s
           and (
-              ifnull(tb.iata_settlement, '') = ''
-              or tb.iata_settlement = %(current_settlement)s
+              (tb.reissue_status = 'Reissued' and ifnull(tb.original_iata_settlement, '') in ('', %(current_settlement)s))
+              or (tb.reissue_status != 'Reissued' and ifnull(tb.iata_settlement, '') in ('', %(current_settlement)s))
           )
-        order by tb.issue_date, tb.name
+        union all
+        select
+            'Reissue' as entry_type, null as iata_adjustment,
+            tb.name as ticket_booking,
+            coalesce(tb.reissue_date, date(tb.reissue_requested_at)) as issue_date,
+            tb.travel_type, tb.passenger_name,
+            coalesce(nullif(tb.reissued_ticket_number, ''), nullif(tb.pending_ticket_number, ''), tb.ticket_number) as ticket_number,
+            tb.route_summary, tb.reissue_iata_amount as iata_amount
+        from `tabTicket Booking` tb
+        where tb.docstatus = 1
+          and tb.approval_status = 'Approved'
+          and tb.payment_mode = 'IATA'
+          and tb.reissue_status = 'Reissued'
+          and ifnull(tb.reissue_iata_amount, 0) > 0
+          and coalesce(tb.reissue_date, date(tb.reissue_requested_at)) between %(period_from)s and %(period_to)s
+          and ifnull(tb.reissue_iata_settlement, '') in ('', %(current_settlement)s)
+        order by issue_date, ticket_booking, entry_type
         """,
         {
             "period_from": period_from,
@@ -349,6 +362,29 @@ def get_eligible_bookings(period_from, period_to, current_settlement=None):
         bookings + adjustments,
         key=lambda row: (getdate(row.issue_date), row.ticket_booking, row.iata_adjustment or ""),
     )
+
+
+def _settlement_field_for_entry(entry_type):
+    if entry_type == "Original":
+        return "original_iata_settlement"
+    if entry_type == "Reissue":
+        return "reissue_iata_settlement"
+    return "iata_settlement"
+
+
+def _refresh_ticket_settlement_status(ticket_booking):
+    values = frappe.db.get_value(
+        "Ticket Booking",
+        ticket_booking,
+        ["reissue_status", "iata_settlement", "original_iata_settlement", "reissue_iata_settlement"],
+        as_dict=True,
+    )
+    if values.reissue_status == "Reissued":
+        settled_count = int(bool(values.original_iata_settlement)) + int(bool(values.reissue_iata_settlement))
+        status = "Settled" if settled_count == 2 else ("Partially Settled" if settled_count else "Unsettled")
+    else:
+        status = "Settled" if values.iata_settlement else "Unsettled"
+    frappe.db.set_value("Ticket Booking", ticket_booking, "iata_settlement_status", status, update_modified=False)
 
 
 @frappe.whitelist()
