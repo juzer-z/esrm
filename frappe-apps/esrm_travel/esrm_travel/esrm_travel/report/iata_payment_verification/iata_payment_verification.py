@@ -39,9 +39,7 @@ def get_columns():
         {"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 180},
         {"label": _("Gross Amount"), "fieldname": "gross_amount", "fieldtype": "Currency", "width": 120},
         {"label": _("Invoice Amount"), "fieldname": "invoice_amount", "fieldtype": "Currency", "width": 120},
-        {"label": _("Original IATA"), "fieldname": "original_iata_amount", "fieldtype": "Currency", "width": 115},
-        {"label": _("Reissue IATA"), "fieldname": "reissue_iata_amount", "fieldtype": "Currency", "width": 115},
-        {"label": _("Total IATA"), "fieldname": "iata_amount", "fieldtype": "Currency", "width": 120},
+        {"label": _("IATA Amount"), "fieldname": "iata_amount", "fieldtype": "Currency", "width": 120},
         {"label": _("Payment Status"), "fieldname": "invoice_status", "fieldtype": "Data", "width": 115},
     ]
 
@@ -65,10 +63,8 @@ def get_data(filters):
                 else 0
             end as reissue_iata_amount,
             case
-                when tb.reissue_status = 'Reissued'
-                 and ifnull(tb.original_iata_amount, 0) > 0
-                 and ifnull(tb.reissue_iata_amount, 0) > 0
-                then tb.original_iata_amount + tb.reissue_iata_amount
+                when tb.reissue_status = 'Reissued' and ifnull(tb.reissue_iata_amount, 0) > 0
+                then tb.reissue_iata_amount
                 else tb.iata_amount
             end as iata_amount,
             coalesce(si.status, tb.invoice_status, 'Not Invoiced') as invoice_status
