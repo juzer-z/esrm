@@ -31,14 +31,17 @@ def get_columns():
         {"label": _("Issue Date"), "fieldname": "issue_date", "fieldtype": "Date", "width": 100},
         {"label": _("Booking / Memo"), "fieldname": "name", "fieldtype": "Data", "width": 135},
         {"label": _("Passenger"), "fieldname": "passenger_name", "fieldtype": "Data", "width": 180},
-        {"label": _("Ticket Number"), "fieldname": "ticket_number", "fieldtype": "Data", "width": 145},
+        {"label": _("Original Ticket"), "fieldname": "ticket_number", "fieldtype": "Data", "width": 145},
+        {"label": _("Reissued Ticket"), "fieldname": "reissued_ticket_number", "fieldtype": "Data", "width": 145},
         {"label": _("PNR"), "fieldname": "pnr", "fieldtype": "Data", "width": 90},
         {"label": _("Route"), "fieldname": "route_summary", "fieldtype": "Data", "width": 120},
         {"label": _("Airline"), "fieldname": "airline", "fieldtype": "Data", "width": 85},
         {"label": _("Customer"), "fieldname": "customer", "fieldtype": "Link", "options": "Customer", "width": 180},
         {"label": _("Gross Amount"), "fieldname": "gross_amount", "fieldtype": "Currency", "width": 120},
         {"label": _("Invoice Amount"), "fieldname": "invoice_amount", "fieldtype": "Currency", "width": 120},
-        {"label": _("IATA Amount"), "fieldname": "iata_amount", "fieldtype": "Currency", "width": 120},
+        {"label": _("Original IATA"), "fieldname": "original_iata_amount", "fieldtype": "Currency", "width": 115},
+        {"label": _("Reissue IATA"), "fieldname": "reissue_iata_amount", "fieldtype": "Currency", "width": 115},
+        {"label": _("Total IATA"), "fieldname": "iata_amount", "fieldtype": "Currency", "width": 120},
         {"label": _("Payment Status"), "fieldname": "invoice_status", "fieldtype": "Data", "width": 115},
     ]
 
@@ -49,8 +52,18 @@ def get_data(filters):
         select
             'Booking' as entry_type,
             tb.name, tb.issue_date, tb.passenger_name, tb.ticket_number,
+            coalesce(tb.reissued_ticket_number, '') as reissued_ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
             tb.gross_amount, tb.invoice_amount,
+            case
+                when tb.reissue_status = 'Reissued' and ifnull(tb.original_iata_amount, 0) > 0
+                then tb.original_iata_amount
+                else tb.iata_amount
+            end as original_iata_amount,
+            case
+                when tb.reissue_status = 'Reissued' then ifnull(tb.reissue_iata_amount, 0)
+                else 0
+            end as reissue_iata_amount,
             case
                 when tb.reissue_status = 'Reissued'
                  and ifnull(tb.original_iata_amount, 0) > 0
@@ -69,8 +82,11 @@ def get_data(filters):
         select
             'Adjustment' as entry_type,
             tb.name, adj.adjustment_date as issue_date, tb.passenger_name, tb.ticket_number,
+            '' as reissued_ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
-            0 as gross_amount, 0 as invoice_amount, adj.adjustment_amount as iata_amount,
+            0 as gross_amount, 0 as invoice_amount,
+            0 as original_iata_amount, 0 as reissue_iata_amount,
+            adj.adjustment_amount as iata_amount,
             'IATA Credit' as invoice_status
         from `tabIATA Adjustment` adj
         inner join `tabTicket Booking` tb on tb.name = adj.ticket_booking
@@ -82,9 +98,11 @@ def get_data(filters):
             memo.memo_type as entry_type, memo.memo_number as name,
             memo.memo_date as issue_date,
             concat(memo.memo_type, ' - Airline ', coalesce(nullif(memo.airline_code, ''), 'N/A')) as passenger_name,
-            coalesce(memo.ticket_number, '') as ticket_number, '' as pnr, '' as route_summary,
+            coalesce(memo.ticket_number, '') as ticket_number, '' as reissued_ticket_number,
+            '' as pnr, '' as route_summary,
             memo.airline_code as airline, '' as customer,
-            0 as gross_amount, 0 as invoice_amount, memo.amount as iata_amount,
+            0 as gross_amount, 0 as invoice_amount,
+            0 as original_iata_amount, 0 as reissue_iata_amount, memo.amount as iata_amount,
             case when memo.status = 'Settled' then concat(memo.memo_type, ' - Settled') else concat(memo.memo_type, ' - Unsettled') end as invoice_status
         from `tabIATA Memo` memo
         where memo.docstatus = 1
@@ -95,9 +113,10 @@ def get_data(filters):
             legacy.memo_type as entry_type, legacy.memo_number as name,
             legacy.memo_date as issue_date,
             concat(legacy.memo_type, ' - Legacy Settlement Memo') as passenger_name,
-            '' as ticket_number, '' as pnr, '' as route_summary,
+            '' as ticket_number, '' as reissued_ticket_number, '' as pnr, '' as route_summary,
             legacy.airline_code as airline, '' as customer,
-            0 as gross_amount, 0 as invoice_amount, legacy.amount as iata_amount,
+            0 as gross_amount, 0 as invoice_amount,
+            0 as original_iata_amount, 0 as reissue_iata_amount, legacy.amount as iata_amount,
             concat(legacy.memo_type, ' - Legacy') as invoice_status
         from `tabIATA Settlement Memo` legacy
         inner join `tabIATA Settlement` settlement on settlement.name = legacy.parent
