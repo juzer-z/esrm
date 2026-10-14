@@ -86,6 +86,10 @@ frappe.ui.form.on("Visa Service", {
     other_charges: calculate_amounts,
     discount: calculate_amounts,
     supplier_cost: calculate_amounts,
+
+    after_workflow_action(frm) {
+        esrm_offer_manual_whatsapp(frm, "workflow");
+    },
 });
 
 frappe.ui.form.on("Visa Document Checklist Item", {

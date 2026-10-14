@@ -44,6 +44,9 @@ frappe.listview_settings["Ticket Booking"] = {
                                     indicator: "green",
                                 });
                             }
+                            if (approved.length) {
+                                esrm_offer_manual_whatsapp_batch("Ticket Booking", approved, "workflow");
+                            }
                             listview.refresh();
                         },
                     });

@@ -52,6 +52,7 @@ function submit_selected_invoices(listview) {
                             message: __("{0} Sales Invoice(s) submitted.", [submitted.length]),
                             indicator: "green",
                         });
+                        esrm_offer_manual_whatsapp_batch("Sales Invoice", submitted, "invoice_submitted");
                     }
 
                     if (failed.length) {

@@ -17,7 +17,10 @@ jinja = {
     ],
 }
 
-app_include_js = ["/assets/esrm_travel/js/approval_notification_refresh.js?v=esrm-home-1"]
+app_include_js = [
+    "/assets/esrm_travel/js/manual_whatsapp.js?v=esrm-wa-1",
+    "/assets/esrm_travel/js/approval_notification_refresh.js?v=esrm-home-1",
+]
 
 doctype_js = {
     "Customer": "public/js/customer.js",

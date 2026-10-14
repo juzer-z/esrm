@@ -32,6 +32,10 @@ frappe.ui.form.on("Expense Claim", {
             }
         }
     },
+
+    after_workflow_action(frm) {
+        esrm_offer_manual_whatsapp(frm, "workflow");
+    },
 });
 
 frappe.ui.form.on("Expense Claim Detail", {

@@ -143,4 +143,8 @@ frappe.ui.form.on("Employee Advance", {
             );
         }
     },
+
+    after_workflow_action(frm) {
+        esrm_offer_manual_whatsapp(frm, "workflow");
+    },
 });

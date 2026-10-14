@@ -84,6 +84,10 @@ frappe.ui.form.on("Ticket Booking", {
             });
         }
     },
+
+    after_workflow_action(frm) {
+        esrm_offer_manual_whatsapp(frm, "workflow");
+    },
 });
 
 frappe.ui.form.on("Ticket Sector", {
@@ -158,7 +162,12 @@ function setup_ticket_reissue(frm) {
                 primary_action_label: __("Send for Approval"),
                 primary_action(values) {
                     frappe.call({method: "esrm_travel.ticket_reissue.request_ticket_reissue", args: {booking_name: frm.doc.name, ...values}, freeze: true,
-                        callback(r) { if (r.message) { dialog.hide(); frm.reload_doc(); } }});
+                        callback(r) {
+                            if (r.message) {
+                                dialog.hide();
+                                frm.reload_doc().then(() => esrm_offer_manual_whatsapp(frm, "reissue_requested"));
+                            }
+                        }});
                 },
             });
             dialog.show();
@@ -168,7 +177,11 @@ function setup_ticket_reissue(frm) {
     if (frappe.session.user === "Administrator" && frm.doc.reissue_status === "Pending Approval") {
         frm.add_custom_button(__("Approve Reissue"), () => {
             frappe.call({method: "esrm_travel.ticket_reissue.approve_ticket_reissue", args: {booking_name: frm.doc.name}, freeze: true,
-                freeze_message: __("Updating ticket and invoice..."), callback(r) { if (r.message) frm.reload_doc(); }});
+                freeze_message: __("Updating ticket and invoice..."), callback(r) {
+                    if (r.message) {
+                        frm.reload_doc().then(() => esrm_offer_manual_whatsapp(frm, "reissue_approved"));
+                    }
+                }});
         }, __("Actions"));
         frm.add_custom_button(__("Reject Reissue"), () => {
             frappe.prompt([{fieldname: "reason", label: __("Reason"), fieldtype: "Small Text", reqd: 1}],
@@ -219,7 +232,7 @@ function setup_ticket_void(frm) {
                     method: "esrm_travel.ticket_void.request_ticket_void",
                     args: { booking_name: frm.doc.name, reason: values.reason },
                     freeze: true,
-                    callback: () => frm.reload_doc(),
+                    callback: () => frm.reload_doc().then(() => esrm_offer_manual_whatsapp(frm, "void_requested")),
                 }),
                 __("Request No-Charge Void"),
                 __("Send for Approval")
@@ -238,6 +251,7 @@ function setup_ticket_void(frm) {
                     callback: (response) => {
                         const result = response.message || {};
                         frm.reload_doc().then(() => {
+                            esrm_offer_manual_whatsapp(frm, "void_approved");
                             if (result.invoice) frappe.set_route("Form", "Sales Invoice", result.invoice);
                         });
                     },

@@ -1,4 +1,8 @@
 frappe.ui.form.on("Sales Invoice", {
+    on_submit(frm) {
+        esrm_offer_manual_whatsapp(frm, "invoice_submitted");
+    },
+
     refresh(frm) {
         if (frappe.session.user !== "Administrator" || frm.is_new()) {
             return;
