@@ -50,7 +50,7 @@ def get_data(filters):
         select
             'Booking' as entry_type,
             tb.name, tb.issue_date, tb.passenger_name, tb.ticket_number,
-            coalesce(tb.reissued_ticket_number, '') as reissued_ticket_number,
+            coalesce(nullif(tb.reissued_ticket_number, ''), nullif(tb.pending_ticket_number, ''), '') as reissued_ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
             tb.gross_amount, tb.invoice_amount,
             case
@@ -73,7 +73,13 @@ def get_data(filters):
         where tb.docstatus = 1
           and tb.approval_status = 'Approved'
           and tb.payment_mode = 'IATA'
-          and tb.issue_date between %(from_date)s and %(to_date)s
+          and (
+              tb.issue_date between %(from_date)s and %(to_date)s
+              or (
+                  tb.reissue_status = 'Reissued'
+                  and date(tb.reissue_requested_at) between %(from_date)s and %(to_date)s
+              )
+          )
         union all
         select
             'Adjustment' as entry_type,
