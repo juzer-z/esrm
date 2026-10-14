@@ -49,7 +49,12 @@ def get_data(filters):
         """
         select
             'Booking' as entry_type,
-            tb.name, tb.issue_date, tb.passenger_name, tb.ticket_number,
+            tb.name, tb.issue_date, tb.passenger_name,
+            case
+                when tb.reissue_status = 'Reissued'
+                then coalesce(nullif(tb.original_ticket_number, ''), tb.ticket_number)
+                else tb.ticket_number
+            end as ticket_number,
             coalesce(nullif(tb.reissued_ticket_number, ''), nullif(tb.pending_ticket_number, ''), '') as reissued_ticket_number,
             tb.pnr, tb.route_summary, tb.airline, tb.customer,
             tb.gross_amount, tb.invoice_amount,
